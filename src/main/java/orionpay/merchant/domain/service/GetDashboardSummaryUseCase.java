@@ -3,9 +3,9 @@ package orionpay.merchant.domain.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import orionpay.merchant.application.ports.input.rest.dto.DashboardSummaryDto;
-import orionpay.merchant.domain.excepion.DomainException;
 import orionpay.merchant.infrastructure.adapters.output.persistence.mapper.DashboardMapper;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.LedgerRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.PricingRepository;
@@ -29,6 +29,7 @@ public class GetDashboardSummaryUseCase {
 
 
     @Transactional
+    @Cacheable(value = "dashboard_summary", key = "#merchantId")
     public DashboardSummaryDto execute(UUID merchantId) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();

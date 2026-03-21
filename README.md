@@ -21,15 +21,16 @@ orionpay.merchant
 
 ### Tecnologias Principais
 *   **Java 21** (LTS)
-*   **Spring Boot 3.x** (Web, Data JPA, Validation, Mail)
+*   **Spring Boot 3.x** (Web, Data JPA, Validation, Mail, Cache)
 *   **PostgreSQL** (Banco de Dados Relacional)
+*   **Redis** (Cache Distribuído)
 *   **MapStruct** (Mapeamento de Objetos)
 *   **Lombok** (Redução de Boilerplate)
 *   **JUnit 5** (Testes)
 
 ---
 
-## ✨ Funcionalidades
+## ✨ Funcionalidades e Otimizações
 
 ### 1. Onboarding de Lojistas (`/api/v1/merchants`)
 *   Cadastro completo de lojista (Merchant).
@@ -38,7 +39,7 @@ orionpay.merchant
 
 ### 2. Autorização de Transações (`/api/v1/transactions`)
 *   Processamento de transações de Débito e Crédito.
-*   Validação de regras de negócio (limites, status do lojista).
+*   **Cache de Taxas (Redis)**: As regras de precificação (`MerchantPricing`) são cacheadas para reduzir latência e carga no banco durante autorizações.
 *   Cálculo automático de taxas (MDR) e valor líquido.
 *   **Ciclo de Liquidação**:
     *   **Débito**: Disponível em D+1.
@@ -46,10 +47,10 @@ orionpay.merchant
 
 ### 3. Gestão Financeira (`/api/v1/dashboard`)
 *   **Livro Razão (Ledger)**: Registro imutável de todas as movimentações financeiras (Partidas Dobradas).
-*   **Dashboard**:
+*   **Dashboard Otimizado (Redis)**:
+    *   Métricas pesadas (TPV, Gráficos) são cacheadas por 10 minutos.
+    *   **Invalidação Inteligente**: O cache é limpo automaticamente a cada nova transação aprovada, garantindo dados sempre frescos ("near real-time").
     *   Saldo Disponível vs. Recebíveis Futuros.
-    *   Total Processado (TPV).
-    *   Gráficos de tendência de vendas e distribuição por bandeira.
 
 ### 4. Saque (Payout) (`/api/v1/withdrawals`)
 *   Solicitação de saque via Pix.
@@ -64,6 +65,7 @@ orionpay.merchant
 *   Java 21 JDK
 *   Maven
 *   PostgreSQL (Local ou Docker)
+*   Redis (Local ou Docker)
 
 ### 1. Configuração do Banco de Dados
 Certifique-se de que o PostgreSQL está rodando. O `application.yml` está configurado para:
@@ -73,10 +75,16 @@ Certifique-se de que o PostgreSQL está rodando. O `application.yml` está confi
 
 *Dica: Execute o script `ddl_tables.sql` e `migration_settlement_cycle.sql` para criar a estrutura inicial.*
 
-### 2. Configuração de E-mail (Opcional)
+### 2. Configuração do Redis
+Certifique-se de que o Redis está rodando na porta padrão `6379`.
+```bash
+docker run -d -p 6379:6379 redis
+```
+
+### 3. Configuração de E-mail (Opcional)
 Para testar o envio de comprovantes, configure o SMTP no `application.yml` ou use o [MailHog](https://github.com/mailhog/MailHog) para simulação local.
 
-### 3. Executando a Aplicação
+### 4. Executando a Aplicação
 ```bash
 mvn spring-boot:run
 ```
@@ -141,6 +149,7 @@ A aplicação estará disponível em `http://localhost:8080`.
 *   **Ledger Imutável**: O saldo nunca é alterado diretamente sem um registro de `LedgerEntry` correspondente (Auditabilidade).
 *   **Optimistic Locking**: Uso de `@Version` na entidade de conta para evitar condições de corrida em atualizações de saldo.
 *   **UUIDs**: Utilizados como identificadores primários para segurança e escalabilidade.
+*   **Cache Strategy**: Uso de Redis com TTL e Cache Eviction para equilibrar performance e consistência.
 *   **Tratamento de Erros**: Exceções de domínio (`DomainException`) mapeadas para respostas HTTP adequadas.
 
 ---

@@ -3,6 +3,7 @@ package orionpay.merchant.domain.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import orionpay.merchant.application.ports.output.GatewayAuthorizationResult;
 import orionpay.merchant.application.ports.output.PaymentGatewayPort;
@@ -34,6 +35,8 @@ public class AuthorizeTransactionUseCase {
     private final PricingRepository pricingRepository;
 
     @Transactional
+    // Invalida o cache do Dashboard para este lojista, pois o saldo e métricas mudaram
+    @CacheEvict(value = "dashboard_summary", key = "#request.merchantId")
     public TransactionResponse execute(TransactionRequest request) {
         log.info("Iniciando autorização de transação para o merchantId: {} | Valor: {}", request.merchantId(), request.amount());
 

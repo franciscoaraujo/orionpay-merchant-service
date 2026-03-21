@@ -2,6 +2,8 @@ package orionpay.merchant.infrastructure.adapters.output.persistence;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import orionpay.merchant.domain.model.MerchantPricing;
 import orionpay.merchant.domain.model.enums.ProductType;
@@ -25,12 +27,14 @@ public class PricingRepositoryAdapter implements PricingRepository {
     private final MerchantPricingMapper mapper;
 
     @Override
+    @Cacheable(value = "merchant_pricing", key = "#merchantId")
     public Optional<MerchantPricing> findCurrentPricing(UUID merchantId) {
         return jpaPricingRepository.findFirstByMerchantIdOrderByEffectiveDateDesc(merchantId)
                 .map(mapper::toDomain);
     }
 
     @Override
+    @Cacheable(value = "merchant_pricing_product", key = "#merchantId + '_' + #productType")
     public Optional<MerchantPricing> findCurrentPricing(UUID merchantId, ProductType productType) {
         Optional<PricingEntity> entity = jpaPricingRepository
                 .findFirstByMerchantIdAndProductTypeOrderByEffectiveDateDesc(merchantId, productType);
@@ -40,6 +44,10 @@ public class PricingRepositoryAdapter implements PricingRepository {
 
     @Override
     @Transactional
+    // Invalida ambos os caches relacionados ao lojista quando há atualização de taxas
+    @CacheEvict(value = {"merchant_pricing", "merchant_pricing_product"}, allEntries = true) 
+    // Nota: allEntries é um pouco agressivo, mas seguro. Idealmente usaríamos key = "#domainList[0].merchantId"
+    // mas a lista pode ser vazia ou mista (embora não deva).
     public void saveAll(List<MerchantPricing> domainList) {
         if (domainList == null || domainList.isEmpty()) return;
 
