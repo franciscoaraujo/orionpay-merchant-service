@@ -1022,3 +1022,54 @@ org.postgresql.util.PSQLException: ERRO: o valor nulo na coluna "available_at" d
 2026-03-21 01:08:45 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
 2026-03-21 01:08:45 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
 2026-03-21 01:08:45 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2026-03-21 01:08:52 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2026-03-21 01:08:52 [main] INFO  o.m.OrionpayMerchantServiceApplication - Starting OrionpayMerchantServiceApplication using Java 21.0.2 with PID 21056 (C:\Users\chico\Github\projects\orionpay-merchant-service\target\classes started by chico in C:\Users\chico\Github\projects\orionpay-merchant-service)
+2026-03-21 01:08:52 [main] INFO  o.m.OrionpayMerchantServiceApplication - No active profile set, falling back to 1 default profile: "default"
+2026-03-21 01:08:52 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-03-21 01:08:52 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 138 ms. Found 8 JPA repository interfaces.
+2026-03-21 01:08:53 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-03-21 01:08:53 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-03-21 01:08:53 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-03-21 01:08:53 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.52]
+2026-03-21 01:08:53 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-03-21 01:08:53 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1583 ms
+2026-03-21 01:08:53 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-03-21 01:08:54 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.42.Final
+2026-03-21 01:08:54 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-03-21 01:08:54 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-03-21 01:08:54 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-03-21 01:08:54 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@29b8df5
+2026-03-21 01:08:54 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-03-21 01:08:54 [main] INFO  o.hibernate.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 18.2
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-03-21 01:08:56 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-03-21 01:08:56 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-03-21 01:08:57 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-03-21 01:08:59 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-03-21 01:08:59 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2026-03-21 01:08:59 [main] INFO  o.m.OrionpayMerchantServiceApplication - Started OrionpayMerchantServiceApplication in 7.744 seconds (process running for 8.206)
+2026-03-21 01:08:59 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-21 01:08:59 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-03-21 01:08:59 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+2026-03-21 01:09:45 [http-nio-8080-exec-2] INFO  o.m.d.s.AuthorizeTransactionUseCase - Iniciando autorização de transação para o merchantId: 3f90ed27-6eca-4bf6-a4e1-607ac55ea73b | Valor: 4545.48
+2026-03-21 01:09:45 [http-nio-8080-exec-2] INFO  o.m.d.s.AuthorizeTransactionUseCase - Enviando transação para o Gateway. TransactionId: 2fd0ae1e-dae2-4491-864c-12cb72ef1903
+2026-03-21 01:09:45 [http-nio-8080-exec-2] INFO  o.m.a.p.o.g.MockPaymentGatewayAdapter - [GATEWAY MOCK] Iniciando comunicação com a rede para transação: 2fd0ae1e-dae2-4491-864c-12cb72ef1903
+2026-03-21 01:09:46 [http-nio-8080-exec-2] INFO  o.m.a.p.o.g.MockPaymentGatewayAdapter - [GATEWAY MOCK] Transação APROVADA. NSU: 4066186645, AuthCode: AUTH4CDCD
+2026-03-21 01:09:46 [http-nio-8080-exec-2] INFO  o.m.d.s.AuthorizeTransactionUseCase - Transação autorizada e persistida com sucesso. ID: 2fd0ae1e-dae2-4491-864c-12cb72ef1903 | NSU: 4066186645
+2026-03-21 01:09:46 [http-nio-8080-exec-2] INFO  o.m.i.a.o.p.LedgerRepositoryAdapter - Lançamento de CREDIT registrado para a conta CC-8B325342 [Journal: 26649fd7-6218-43bf-ad74-b18973d77d41] | Disponível em: 2026-04-20T01:09:46.679485200
+2026-03-21 01:09:46 [http-nio-8080-exec-2] INFO  o.m.d.s.AuthorizeTransactionUseCase - Movimentação financeira realizada. Disponível em: 2026-04-20T01:09:46.679485200
+2026-03-21 01:11:09 [http-nio-8080-exec-5] INFO  o.m.d.s.AuthorizeTransactionUseCase - Iniciando autorização de transação para o merchantId: 3f90ed27-6eca-4bf6-a4e1-607ac55ea73b | Valor: 1258.88
+2026-03-21 01:11:09 [http-nio-8080-exec-5] INFO  o.m.d.s.AuthorizeTransactionUseCase - Enviando transação para o Gateway. TransactionId: fc263c81-3ad2-4a5c-b543-10227aec6366
+2026-03-21 01:11:09 [http-nio-8080-exec-5] INFO  o.m.a.p.o.g.MockPaymentGatewayAdapter - [GATEWAY MOCK] Iniciando comunicação com a rede para transação: fc263c81-3ad2-4a5c-b543-10227aec6366
+2026-03-21 01:11:10 [http-nio-8080-exec-5] INFO  o.m.a.p.o.g.MockPaymentGatewayAdapter - [GATEWAY MOCK] Transação APROVADA. NSU: 4066270239, AuthCode: AUTH057EF
+2026-03-21 01:11:10 [http-nio-8080-exec-5] INFO  o.m.d.s.AuthorizeTransactionUseCase - Transação autorizada e persistida com sucesso. ID: fc263c81-3ad2-4a5c-b543-10227aec6366 | NSU: 4066270239
+2026-03-21 01:11:10 [http-nio-8080-exec-5] INFO  o.m.i.a.o.p.LedgerRepositoryAdapter - Lançamento de CREDIT registrado para a conta CC-8B325342 [Journal: ee7ec9e1-47ee-4825-9308-8c3b155d89c1] | Disponível em: 2026-03-22T01:11:10.247157
+2026-03-21 01:11:10 [http-nio-8080-exec-5] INFO  o.m.d.s.AuthorizeTransactionUseCase - Movimentação financeira realizada. Disponível em: 2026-03-22T01:11:10.247157
+2026-03-21 01:12:49 [http-nio-8080-exec-6] INFO  o.m.d.service.WithdrawMoneyUseCase - Iniciando solicitação de saque para merchantId: 3f90ed27-6eca-4bf6-a4e1-607ac55ea73b | Valor: 500.00
+2026-03-21 01:12:49 [http-nio-8080-exec-6] WARN  o.m.d.service.WithdrawMoneyUseCase - Bloqueio de Saque: Saldo insuficiente. Real: 0.00 | Solicitado: 500.00
