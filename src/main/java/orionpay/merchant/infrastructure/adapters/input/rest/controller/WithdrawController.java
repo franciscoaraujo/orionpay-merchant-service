@@ -1,0 +1,23 @@
+package orionpay.merchant.infrastructure.adapters.input.rest.controller;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import orionpay.merchant.domain.service.WithdrawMoneyUseCase;
+import orionpay.merchant.infrastructure.adapters.input.rest.dto.WithdrawRequest;
+
+@RestController
+@RequestMapping("/api/v1/merchants")
+@CrossOrigin(origins = "*", allowedHeaders = "*")
+@RequiredArgsConstructor
+public class WithdrawController {
+
+    private final WithdrawMoneyUseCase withdrawMoneyUseCase;
+
+    @PostMapping("/withdrawals")
+    public ResponseEntity<Void> requestWithdraw(@Valid @RequestBody WithdrawRequest request) {
+        withdrawMoneyUseCase.execute(request);
+        return ResponseEntity.accepted().build();
+    }
+}

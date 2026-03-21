@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: merchant-service
+  
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: bitwisebytes@gmail.com
+    # ATENÇÃO: Use uma "Senha de App" gerada no Google (16 caracteres), não sua senha normal.
+    # Tutorial: https://support.google.com/accounts/answer/185833
+    password: clda bfty kpbs nieo # Substitua isso pela Senha de App
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+        debug: true # Ativa logs detalhados do JavaMail para debug
+
+  datasource:
+    # URL baseada na imagem: localhost:5432 e banco orion_payments
+    url: jdbc:postgresql://localhost:5432/orion_payments?currentSchema=core,ops,sales,accounting,audit
+    username: postgres
+    password: admin # ${DB_PASSWORD:postgres} # Usa a variável de ambiente ou 'postgres' como padrão
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    open-in-view: false
+    # database-platform: org.hibernate.dialect.PostgreSQLDialect  <-- REMOVIDO
+    hibernate:
+      # Use 'none' ou 'validate' em produção. 'update' apenas para desenvolvimento.
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        # Define o schema padrão para evitar ter que prefixar todas as tabelas
+        default_schema: core
+        # Otimização para alto volume de transações
+        jdbc:
+          batch_size: 20
+          order_inserts: false
+          order_updates: false
+
+  # Configuração de Logs específica para o Spring
+  output:
+    ansi:
+      enabled: always
+
+logging:
+  config: classpath:logback-spring.xml # Link com o arquivo que criamos antes
