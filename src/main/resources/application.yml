@@ -2,13 +2,20 @@ spring:
   application:
     name: merchant-service
   
+  # Configuração explícita do Redis para evitar ambiguidade de localhost
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      # password: se_tiver_senha_coloque_aqui
+
   mail:
     host: smtp.gmail.com
     port: 587
     username: bitwisebytes@gmail.com
     # ATENÇÃO: Use uma "Senha de App" gerada no Google (16 caracteres), não sua senha normal.
     # Tutorial: https://support.google.com/accounts/answer/185833
-    password: clda bfty kpbs nieo # Substitua isso pela Senha de App
+    password:  # Substitua isso pela Senha de App
     properties:
       mail:
         smtp:

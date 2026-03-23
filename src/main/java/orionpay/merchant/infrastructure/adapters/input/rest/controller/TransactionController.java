@@ -22,7 +22,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/transactions")
-@CrossOrigin(origins = "*", allowedHeaders = "*") // Permite CORS para todos (dev) ou ajuste para localhost:3000
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 @RequiredArgsConstructor
 public class TransactionController {
 
@@ -32,8 +32,12 @@ public class TransactionController {
 
 
     @PostMapping("/authorize")
-    public ResponseEntity<TransactionResponse> authorize(@Valid @RequestBody TransactionRequest request) {
-        TransactionResponse response = authorizeUseCase.execute(request);
+    public ResponseEntity<TransactionResponse> authorize(
+            @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody TransactionRequest request
+    ) {
+        // Passa a chave de idempotência para o Use Case
+        TransactionResponse response = authorizeUseCase.execute(request, idempotencyKey);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

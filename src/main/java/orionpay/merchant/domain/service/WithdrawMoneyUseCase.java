@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import orionpay.merchant.application.ports.output.PaymentServicePort;
 import orionpay.merchant.domain.excepion.DomainException;
+import orionpay.merchant.domain.model.IdempotencyResult;
 import orionpay.merchant.domain.model.LedgerAccount;
 import orionpay.merchant.domain.model.enums.EntryType;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.WithdrawRequest;
@@ -24,65 +25,77 @@ public class WithdrawMoneyUseCase {
     private final LedgerRepository ledgerRepository;
     private final JpaPayoutRepository payoutRepository;
     private final PaymentServicePort paymentService;
+    private final IdempotencyService idempotencyService;
 
     @Transactional
-    public void execute(WithdrawRequest request) {
-        log.info("Iniciando solicitação de saque para merchantId: {} | Valor: {}", request.merchantId(), request.amount());
-
-        if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new DomainException("O valor do saque deve ser positivo.");
+    public void execute(WithdrawRequest request, String idempotencyKey) {
+        // 1. Checagem de Idempotência
+        IdempotencyResult cachedResult = idempotencyService.checkAndLock(idempotencyKey);
+        if (cachedResult != null) {
+            if ("SUCCESS".equals(cachedResult.getStatus())) {
+                log.info("Requisição de saque idempotente (já processada). Chave: {}", idempotencyKey);
+                return; // Já foi sucesso, retorna 202 Accepted sem fazer nada
+            } else {
+                throw new DomainException(cachedResult.getErrorMessage(), "IDEMPOTENCY_ERROR");
+            }
         }
 
-        // ---------------------------------------------------------------------
-        // TRAVA DE SAQUE: Validação contra Saldo "Líquido e Certo"
-        // ---------------------------------------------------------------------
-        // O método findRealAvailableBalance executa uma query que soma APENAS:
-        // 1. Créditos cuja data de disponibilidade (available_at) já passou ou é hoje.
-        // 2. Menos TODOS os Débitos (saques anteriores, estornos, taxas).
-        // Isso garante que o lojista não saque dinheiro de vendas futuras (D+30).
-        BigDecimal realAvailableBalance = ledgerRepository.findRealAvailableBalance(request.merchantId());
-        
-        log.debug("Saldo Real Disponível: {} | Valor Solicitado: {}", realAvailableBalance, request.amount());
+        try {
+            log.info("Iniciando solicitação de saque para merchantId: {} | Valor: {}", request.merchantId(), request.amount());
 
-        if (realAvailableBalance.compareTo(request.amount()) < 0) {
-            log.warn("Bloqueio de Saque: Saldo insuficiente. Real: {} | Solicitado: {}", realAvailableBalance, request.amount());
-            throw new DomainException("Saldo disponível insuficiente para saque imediato (Vendas futuras não incluídas).");
-        }
+            if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new DomainException("O valor do saque deve ser positivo.");
+            }
 
-        // Se passou da trava, segue o fluxo normal
-        LedgerAccount account = ledgerRepository.findByMerchantId(request.merchantId())
-                .orElseThrow(() -> new DomainException("Conta contábil não encontrada."));
+            BigDecimal realAvailableBalance = ledgerRepository.findRealAvailableBalance(request.merchantId());
+            
+            if (realAvailableBalance.compareTo(request.amount()) < 0) {
+                String errorMsg = "Saldo disponível insuficiente para saque imediato.";
+                idempotencyService.saveError(idempotencyKey, errorMsg);
+                throw new DomainException(errorMsg);
+            }
 
-        PayoutEntity payout = new PayoutEntity();
-        payout.setMerchantId(request.merchantId());
-        payout.setAmount(request.amount());
-        payout.setPixKey(request.pixKey());
-        payout.setStatus(PayoutEntity.PayoutStatus.PENDING);
-        
-        payoutRepository.save(payout);
+            LedgerAccount account = ledgerRepository.findByMerchantId(request.merchantId())
+                    .orElseThrow(() -> new DomainException("Conta contábil não encontrada."));
 
-        account.debit(request.amount()); 
-        ledgerRepository.saveAccount(account);
-
-        ledgerRepository.saveEntry(
-                account,
-                request.amount(),
-                EntryType.DEBIT,
-                "Saque Pix - ID: " + payout.getId(),
-                payout.getId(),
-                LocalDateTime.now() // Débito é imediato
-        );
-
-        boolean success = paymentService.processPixPayout(request.pixKey(), request.amount());
-
-        if (success) {
-            payout.setStatus(PayoutEntity.PayoutStatus.COMPLETED);
-            payout.setCompletedAt(LocalDateTime.now());
+            PayoutEntity payout = new PayoutEntity();
+            payout.setMerchantId(request.merchantId());
+            payout.setAmount(request.amount());
+            payout.setPixKey(request.pixKey());
+            payout.setStatus(PayoutEntity.PayoutStatus.PENDING);
+            
             payoutRepository.save(payout);
-            log.info("Saque realizado com sucesso. PayoutId: {}", payout.getId());
-        } else {
-            log.error("Falha no processamento do pagamento externo. Realizando rollback.");
-            throw new DomainException("Falha ao processar pagamento externo. Tente novamente.");
+
+            account.debit(request.amount()); 
+            ledgerRepository.saveAccount(account);
+
+            ledgerRepository.saveEntry(
+                    account,
+                    request.amount(),
+                    EntryType.DEBIT,
+                    "Saque Pix - ID: " + payout.getId(),
+                    payout.getId(),
+                    LocalDateTime.now()
+            );
+
+            boolean success = paymentService.processPixPayout(request.pixKey(), request.amount());
+
+            if (success) {
+                payout.setStatus(PayoutEntity.PayoutStatus.COMPLETED);
+                payout.setCompletedAt(LocalDateTime.now());
+                payoutRepository.save(payout);
+                idempotencyService.saveSuccess(idempotencyKey, "Saque realizado com sucesso");
+                log.info("Saque realizado com sucesso. PayoutId: {}", payout.getId());
+            } else {
+                String errorMsg = "Falha ao processar pagamento externo. Tente novamente.";
+                idempotencyService.releaseLock(idempotencyKey); // Libera para retry
+                throw new DomainException(errorMsg);
+            }
+
+        } catch (Exception e) {
+            idempotencyService.releaseLock(idempotencyKey);
+            log.error("Erro no saque: ", e);
+            throw e;
         }
     }
 }

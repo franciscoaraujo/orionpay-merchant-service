@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import orionpay.merchant.application.ports.output.GatewayAuthorizationResult;
 import orionpay.merchant.application.ports.output.PaymentGatewayPort;
 import orionpay.merchant.domain.excepion.DomainException;
+import orionpay.merchant.domain.model.IdempotencyResult;
 import orionpay.merchant.domain.model.LedgerAccount;
 import orionpay.merchant.domain.model.Merchant;
 import orionpay.merchant.domain.model.Transaction;
@@ -33,15 +34,27 @@ public class AuthorizeTransactionUseCase {
     private final LedgerRepository ledgerRepository;
     private final PaymentGatewayPort paymentGateway;
     private final PricingRepository pricingRepository;
+    private final IdempotencyService idempotencyService;
 
     @Transactional
     // Invalida o cache do Dashboard para este lojista, pois o saldo e métricas mudaram
     @CacheEvict(value = "dashboard_summary", key = "#request.merchantId")
-    public TransactionResponse execute(TransactionRequest request) {
-        log.info("Iniciando autorização de transação para o merchantId: {} | Valor: {}", request.merchantId(), request.amount());
+    public TransactionResponse execute(TransactionRequest request, String idempotencyKey) {
+        // 1. Checagem de Idempotência
+        IdempotencyResult cachedResult = idempotencyService.checkAndLock(idempotencyKey);
+        if (cachedResult != null) {
+            if ("SUCCESS".equals(cachedResult.getStatus())) {
+                log.info("Retornando resposta idempotente para chave: {}", idempotencyKey);
+                return (TransactionResponse) cachedResult.getResponseBody();
+            } else {
+                throw new DomainException(cachedResult.getErrorMessage(), "IDEMPOTENCY_ERROR");
+            }
+        }
 
         try {
-            // 1. Buscar e Validar Lojista
+            log.info("Iniciando autorização de transação para o merchantId: {} | Valor: {}", request.merchantId(), request.amount());
+
+            // 2. Buscar e Validar Lojista
             Merchant merchant = merchantRepository.findById(request.merchantId())
                     .orElseThrow(() -> {
                         log.warn("Merchant não encontrado: {}", request.merchantId());
@@ -77,6 +90,7 @@ public class AuthorizeTransactionUseCase {
                 log.warn("Transação negada pelo Gateway. Motivo: {}", authResult.getErrorMessage());
                 transaction.decline(authResult.getErrorMessage());
                 transactionRepository.save(transaction);
+                idempotencyService.saveError(idempotencyKey, "Transação negada: " + authResult.getErrorMessage());
                 throw new DomainException("Transação negada: " + authResult.getErrorMessage());
             }
 
@@ -118,9 +132,13 @@ public class AuthorizeTransactionUseCase {
                 log.info("Movimentação financeira realizada. Disponível em: {}", availableAt);
             }
 
-            return TransactionResponse.fromDomain(transaction, "Transação aprovada.");
+            TransactionResponse response = TransactionResponse.fromDomain(transaction, "Transação aprovada.");
+            idempotencyService.saveSuccess(idempotencyKey, response);
+            return response;
 
         } catch (Exception e) {
+            // Em caso de erro inesperado, libera o lock para permitir retry
+            idempotencyService.releaseLock(idempotencyKey);
             log.error("Erro inesperado ao autorizar transação para merchantId: {}", request.merchantId(), e);
             throw e;
         }
