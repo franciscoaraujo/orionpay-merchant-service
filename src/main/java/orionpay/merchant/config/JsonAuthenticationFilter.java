@@ -26,13 +26,17 @@ public class JsonAuthenticationFilter extends UsernamePasswordAuthenticationFilt
     }
 
     @Override
-    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+    public Authentication attemptAuthentication(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) throws AuthenticationException {
         log.info("Tentativa de autenticação. Content-Type: {}", request.getContentType());
 
         if (request.getContentType() != null && request.getContentType().contains("application/json")) {
             try {
                 // Lê o corpo da requisição e mapeia para o DTO
-                LoginRequest loginRequest = objectMapper.readValue(request.getInputStream(), LoginRequest.class);
+                LoginRequest loginRequest = objectMapper
+                        .readValue(request.getInputStream(), LoginRequest.class);
                 
                 log.info("Login via JSON recebido para usuário: {}", loginRequest.getUsername());
 

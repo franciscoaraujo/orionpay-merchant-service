@@ -27,11 +27,6 @@ public class RedisConfig {
 
     private static final Duration DEFAULT_TTL = Duration.ofMinutes(10);
 
-    // REMOVIDO: springSessionDefaultRedisSerializer
-    // Ao remover este bean, o Spring Session usará o JdkSerializationRedisSerializer por padrão.
-    // Isso resolve o problema de desserialização de objetos complexos de segurança (UsernamePasswordAuthenticationToken)
-    // que não possuem construtores padrão para JSON.
-
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
@@ -43,7 +38,7 @@ public class RedisConfig {
         template.setValueSerializer(serializer);
         template.setHashKeySerializer(new StringRedisSerializer());
         template.setHashValueSerializer(serializer);
-        
+
         return template;
     }
 
@@ -60,7 +55,7 @@ public class RedisConfig {
                 .cacheDefaults(config)
                 .build();
     }
-    
+
     private GenericJackson2JsonRedisSerializer createJsonSerializer() {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());

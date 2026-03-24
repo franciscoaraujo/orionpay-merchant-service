@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface JpaMerchantRepository extends JpaRepository<MerchantEntity, UUID> {
     Optional<MerchantEntity> findByDocument(String document);
+    Optional<MerchantEntity> findByEmailIgnoreCase(String email);
 }

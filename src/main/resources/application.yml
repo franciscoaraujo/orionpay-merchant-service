@@ -64,3 +64,8 @@ spring:
 
 logging:
   config: classpath:logback-spring.xml
+
+jwt:
+  secret: ${JWT_SECRET:orionpay-super-secret-key-change-me-orionpay-super-secret-key-change-me}
+  access-token-expiration-minutes: 15
+  refresh-token-expiration-days: 7
