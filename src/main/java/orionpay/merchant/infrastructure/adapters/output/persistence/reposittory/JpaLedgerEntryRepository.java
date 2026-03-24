@@ -46,20 +46,17 @@ public interface JpaLedgerEntryRepository extends JpaRepository<LedgerEntryEntit
        """)
     BigDecimal sumFutureReceivables(@Param("merchantId") UUID merchantId);
 
+    // Soma Créditos Disponíveis e subtrai Todos os Débitos
     @Query("""
        SELECT COALESCE(SUM(
            CASE 
-               WHEN e.type = 'CREDIT' THEN e.amount 
-               ELSE -e.amount 
+               WHEN e.type = 'CREDIT' AND e.availableAt <= CURRENT_TIMESTAMP THEN e.amount 
+               WHEN e.type = 'DEBIT' THEN -e.amount 
+               ELSE 0 
            END
        ), 0)
        FROM LedgerEntryEntity e
        WHERE e.ledgerAccount.merchantId = :merchantId
-         AND (
-             e.type = 'DEBIT' 
-             OR 
-             (e.type = 'CREDIT' AND e.availableAt <= CURRENT_TIMESTAMP)
-         )
        """)
     BigDecimal calculateRealAvailableBalance(@Param("merchantId") UUID merchantId);
 
