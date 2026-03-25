@@ -3,6 +3,7 @@ package orionpay.merchant.infrastructure.adapters.input.rest.dto;
 import jakarta.validation.constraints.*;
 import org.hibernate.validator.constraints.CreditCardNumber;
 import orionpay.merchant.domain.model.enums.ProductType;
+import orionpay.merchant.infrastructure.adapters.input.rest.validation.ValidTransactionRequest; // Importar a nova anotação
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -11,13 +12,7 @@ import java.util.UUID;
  * DTO de Entrada para novas transações.
  * Valida os dados antes mesmo de chegarem ao Use Case.
  */
-
-import jakarta.validation.constraints.*;
-import orionpay.merchant.domain.model.enums.ProductType;
-
-import java.math.BigDecimal;
-import java.util.UUID;
-
+@ValidTransactionRequest // Aplicar a validação customizada aqui
 public record TransactionRequest(
 
         // --- CONTEXTO DA TRANSAÇÃO ---
@@ -60,9 +55,12 @@ public record TransactionRequest(
         @Pattern(regexp = "^(0[1-9]|1[0-2])/([0-9]{2})$", message = "A data de expiração deve estar no formato MM/AA")
         String expirationDate,
 
-        @NotBlank(message = "O código de segurança (CVV) é obrigatório")
         @Pattern(regexp = "^[0-9]{3,4}$", message = "O CVV deve conter 3 ou 4 dígitos")
-        String cvv
+        String cvv, // Removido @NotBlank
+
+        // Novos campos EMV
+        String applicationCryptogram, // Tag 9F26
+        String atc // Tag 9F36
 ) {
         /**
          * MÉTODOS AUXILIARES DO RECORD

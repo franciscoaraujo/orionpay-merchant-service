@@ -83,10 +83,8 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
 
     @Override
     public Page<ExtratoTransaction> findCustomExtrato(UUID merchantId, String search, Pageable pageable) {
-        // Busca as entidades do banco (Schema core.transaction)
-        var entities = jpaTransactionRepository.findAllByMerchantIdAndFilter(merchantId, search, pageable);
-
-        // Converte para o modelo de domínio do extrato
+        String searchQuery = (search == null || search.trim().isEmpty()) ? null : search;
+        var entities = jpaTransactionRepository.findAllByMerchantIdAndFilter(merchantId, searchQuery, pageable);
         return entities.map(mapper::toExtratoDomain);
     }
 
