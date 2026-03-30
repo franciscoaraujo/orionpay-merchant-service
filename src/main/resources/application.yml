@@ -69,3 +69,30 @@ jwt:
   secret: ${JWT_SECRET:orionpay-super-secret-key-change-me-orionpay-super-secret-key-change-me}
   access-token-expiration-minutes: 15
   refresh-token-expiration-days: 7
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      adquirenteService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+  retry:
+    instances:
+      adquirenteService:
+        maxAttempts: 3
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - java.util.concurrent.TimeoutException
+          - java.io.IOException
+          - org.springframework.web.client.ResourceAccessException
+  bulkhead:
+    instances:
+      settlementEngine:
+        maxConcurrentCalls: 10
+        maxWaitDuration: 0

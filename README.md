@@ -1,6 +1,6 @@
 # OrionPay Merchant Service 🚀
 
-Este é o microserviço central da plataforma de pagamentos **OrionPay**, responsável pela gestão de lojistas, processamento de transações, controle financeiro (Ledger) e liquidação.
+Este é o microserviço central da plataforma de pagamentos **OrionPay**, responsável pela gestão de lojistas, processamento de transações, controle financeiro (Ledger), liquidação e resiliência.
 
 Construído com **Java 21**, **Spring Boot 3.x** e seguindo os princípios de **Arquitetura Hexagonal (Ports & Adapters)** e **Domain-Driven Design (DDD)**.
 
@@ -21,41 +21,37 @@ orionpay.merchant
 
 ### Tecnologias Principais
 *   **Java 21** (LTS)
-*   **Spring Boot 3.x** (Web, Data JPA, Validation, Mail, Cache)
+*   **Spring Boot 3.x** (Web, Data JPA, Validation, AMQP, Cache)
+*   **RabbitMQ** (Mensageria e Motor de Eventos)
 *   **PostgreSQL** (Banco de Dados Relacional)
-*   **Redis** (Cache Distribuído)
+*   **Redis** (Cache Distribuído e Idempotência)
+*   **Resilience4j** (Circuit Breaker, Retry e Bulkhead)
 *   **MapStruct** (Mapeamento de Objetos)
 *   **Lombok** (Redução de Boilerplate)
-*   **JUnit 5** (Testes)
 
 ---
 
-## ✨ Funcionalidades e Otimizações
+## ✨ Funcionalidades e Otimizações de Elite
 
-### 1. Onboarding de Lojistas (`/api/v1/merchants`)
-*   Cadastro completo de lojista (Merchant).
-*   Registro de endereço e conta bancária.
-*   Criação automática da Conta Contábil (Ledger Account).
+### 1. Motor de Liquidação Assíncrono (Settlement Engine)
+*   **Arquitetura Baseada em Eventos**: Transações autorizadas disparam eventos via **RabbitMQ** para processamento financeiro desacoplado.
+*   **Garantia de Idempotência**: Uso de travas distribuídas no **Redis** para evitar duplicidade de liquidação.
+*   **Resiliência Financeira**: Implementação de **Dead Letter Queues (DLQ)** para garantir que nenhuma falha de processamento resulte em perda de dados contábeis.
 
-### 2. Autorização de Transações (`/api/v1/transactions`)
-*   Processamento de transações de Débito e Crédito.
-*   **Cache de Taxas (Redis)**: As regras de precificação (`MerchantPricing`) são cacheadas para reduzir latência e carga no banco durante autorizações.
-*   Cálculo automático de taxas (MDR) e valor líquido.
-*   **Ciclo de Liquidação**:
-    *   **Débito**: Disponível em D+1.
-    *   **Crédito**: Disponível em D+30.
+### 2. Resiliência e Tolerância a Falhas
+*   **Circuit Breaker & Retry**: Proteção contra falhas no Gateway de Adquirentes e serviços externos usando **Resilience4j**.
+*   **Bulkhead Isolation**: Limitação de execução concorrente no motor de liquidação para proteger a saúde do sistema em picos de carga.
+*   **Fallback Logic**: Respostas tratadas ("Sistema Indisponível") em vez de erros 500 durante instabilidades externas.
 
-### 3. Gestão Financeira (`/api/v1/dashboard`)
-*   **Livro Razão (Ledger)**: Registro imutável de todas as movimentações financeiras (Partidas Dobradas).
-*   **Dashboard Otimizado (Redis)**:
-    *   Métricas pesadas (TPV, Gráficos) são cacheadas por 10 minutos.
-    *   **Invalidação Inteligente**: O cache é limpo automaticamente a cada nova transação aprovada, garantindo dados sempre frescos ("near real-time").
-    *   Saldo Disponível vs. Recebíveis Futuros.
+### 3. Inteligência Financeira e Performance (Sprint 1 - Read Models)
+*   **Dashboard de Alta Performance**: Implementação de **Read Models** (Tabelas de Resumo Diário) com complexidade de leitura **O(1)**.
+*   **Upsert Atômico**: Uso de `ON CONFLICT DO UPDATE` no PostgreSQL para consolidação de métricas em tempo real (TPV, Net Revenue, Ticket Médio).
+*   **Comparação de Período Equivalente**: Inteligência de BI que compara "Hoje vs Ontem" no mesmo intervalo de horas para métricas precisas.
 
-### 4. Saque (Payout) (`/api/v1/withdrawals`)
-*   Solicitação de saque via Pix.
-*   **Trava de Segurança**: Validação estrita do Saldo Disponível (ignora recebíveis futuros).
-*   Integração com Gateway de Pagamento (Mock/Simulação).
+### 4. Segurança e Auditoria
+*   **Idempotência em API**: Header `X-Idempotency-Key` obrigatório em fluxos críticos (Saque e Autorização).
+*   **JWT com JTI**: Tokens de acesso e refresh protegidos com Identificador Único (JTI) para prevenir ataques de replay.
+*   **Ledger Imutável (Livro Razão)**: Registro rigoroso de todas as movimentações financeiras seguindo o padrão de partidas dobradas.
 
 ---
 
@@ -66,94 +62,44 @@ orionpay.merchant
 *   Maven
 *   PostgreSQL (Local ou Docker)
 *   Redis (Local ou Docker)
+*   RabbitMQ (Local ou Docker)
 
-### 1. Configuração do Banco de Dados
-Certifique-se de que o PostgreSQL está rodando. O `application.yml` está configurado para:
+### 1. Configuração da Infraestrutura (Docker)
+```bash
+# Subir Redis e RabbitMQ rapidamente
+docker run -d --name redis -p 6379:6379 redis
+docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+```
+
+### 2. Configuração do Banco de Dados
+O `application.yml` está configurado para:
 *   URL: `jdbc:postgresql://localhost:5432/orion_payments`
 *   User: `postgres`
 *   Pass: `admin`
 
-*Dica: Execute o script `ddl_tables.sql` e `migration_settlement_cycle.sql` para criar a estrutura inicial.*
+*Dica: Certifique-se de que o schema `ops` e `accounting` existam no seu banco.*
 
-### 2. Configuração do Redis
-Certifique-se de que o Redis está rodando na porta padrão `6379`.
-```bash
-docker run -d -p 6379:6379 redis
-```
-
-### 3. Configuração de E-mail (Opcional)
-Para testar o envio de comprovantes, configure o SMTP no `application.yml` ou use o [MailHog](https://github.com/mailhog/MailHog) para simulação local.
-
-### 4. Executando a Aplicação
+### 3. Executando a Aplicação
 ```bash
 mvn spring-boot:run
 ```
 
-A aplicação estará disponível em `http://localhost:8080`.
+---
+
+## 📚 Endpoints Principais
+
+*   **Autorizar Transação**: `POST /api/v1/transactions/authorize` (Requer `X-Idempotency-Key`)
+*   **Dashboard Summary**: `GET /api/v1/dashboard/{merchantId}/summary`
+*   **Solicitar Saque**: `POST /api/v1/withdrawals` (Requer `X-Idempotency-Key`)
+*   **Extrato de Transações**: `GET /api/v1/transactions/{merchantId}/extrato`
 
 ---
 
-## 📚 Documentação da API
-
-### Criar Lojista
-`POST /api/v1/merchants/onboarding`
-```json
-{
-  "name": "Padaria do Chico",
-  "document": "12345678000199",
-  "email": "contato@padaria.com",
-  "zipCode": "01310000",
-  "street": "Av. Paulista",
-  "number": "1000",
-  "neighborhood": "Bela Vista",
-  "city": "São Paulo",
-  "state": "SP",
-  "bankCode": "341",
-  "branch": "1234",
-  "account": "56789",
-  "accountDigit": "0",
-  "accountType": "CHECKING"
-}
-```
-
-### Autorizar Transação
-`POST /api/v1/transactions/authorize`
-```json
-{
-  "merchantId": "UUID_DO_LOJISTA",
-  "amount": 150.00,
-  "productType": "CREDIT_A_VISTA",
-  "terminalSerialNumber": "POS-001",
-  "terminalSn": "POS-001",
-  "entryMode": "CHIP"
-}
-```
-
-### Solicitar Saque
-`POST /api/v1/withdrawals`
-```json
-{
-  "merchantId": "UUID_DO_LOJISTA",
-  "amount": 50.00,
-  "pixKey": "chave@pix.com"
-}
-```
-
-### Consultar Dashboard
-`GET /api/v1/dashboard/{merchantId}/summary`
-
----
-
-## 🛡️ Segurança e Decisões Técnicas
-
-*   **Ledger Imutável**: O saldo nunca é alterado diretamente sem um registro de `LedgerEntry` correspondente (Auditabilidade).
-*   **Optimistic Locking**: Uso de `@Version` na entidade de conta para evitar condições de corrida em atualizações de saldo.
-*   **UUIDs**: Utilizados como identificadores primários para segurança e escalabilidade.
-*   **Cache Strategy**: Uso de Redis com TTL e Cache Eviction para equilibrar performance e consistência.
-*   **Tratamento de Erros**: Exceções de domínio (`DomainException`) mapeadas para respostas HTTP adequadas.
+## 🛡️ Decisões Técnicas de Escala
+*   **Separação de Preocupações**: A lógica de autorização (rápida) é separada da lógica de liquidação (lenta/complexa) via mensageria.
+*   **Escalabilidade de Leitura**: O Dashboard lê resumos pré-calculados, permitindo que o sistema suporte milhões de usuários simultâneos sem degradar a performance do banco.
 
 ---
 
 ## 📝 Licença
-
 Este projeto é proprietário da **OrionPay**.

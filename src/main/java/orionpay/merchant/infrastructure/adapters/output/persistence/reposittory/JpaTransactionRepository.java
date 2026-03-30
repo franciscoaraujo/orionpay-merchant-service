@@ -19,19 +19,35 @@ import java.util.UUID;
 @Repository
 public interface JpaTransactionRepository extends JpaRepository<TransactionEntity, UUID> {
 
-    // CORREÇÃO 1: Use o padrão de "Property Traversal" (Atributo_SubAtributo)
     List<TransactionEntity> findByMerchantId(UUID merchantId);
 
     Optional<TransactionEntity> findByNsu(String nsu);
 
-    // No Native Query, você usa os nomes das COLUNAS do banco (merchant_id), então aqui estava correto.
     @Query(value = """
-            SELECT 
-                COALESCE(SUM(amount), 0) AS approvedVolume,
+            SELECT
+                COALESCE(SUM(t.amount), 0) AS totalVolume,
+                COALESCE(SUM(se.net_amount), 0) AS netVolume,
+                COUNT(DISTINCT t.id) AS totalCount,
+                COUNT(DISTINCT t.id) FILTER (WHERE t.status = 'APPROVED') AS approvedCount
+            FROM core.transaction t
+            LEFT JOIN ops.settlement_entry se ON t.id = se.transaction_id AND se.status IN ('PENDING', 'SETTLED')
+            WHERE t.merchant_id = :merchantId
+            AND t.created_at BETWEEN :startDate AND :endDate
+            """, nativeQuery = true)
+    TransactionSummaryProjection getSummaryByPeriod(
+            @Param("merchantId") UUID merchantId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query(value = """
+            SELECT
+                COALESCE(SUM(amount), 0) AS totalVolume,
+                COALESCE(SUM(net_amount), 0) AS netVolume,
                 COUNT(*) AS totalCount,
                 COUNT(*) FILTER (WHERE status = 'APPROVED') AS approvedCount
-            FROM core.transaction 
-            WHERE merchant_id = :merchantId 
+            FROM core.transaction
+            WHERE merchant_id = :merchantId
             AND created_at >= :startOfDay
             """, nativeQuery = true)
     TransactionSummaryProjection getDailySummary(
@@ -43,18 +59,18 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionEntit
         WITH hours AS (
             SELECT generate_series(0, 23) AS hour
         )
-        SELECT 
+        SELECT
             h.hour as hour,
-            COALESCE(SUM(CASE 
-                WHEN CAST(t.created_at AS DATE) = CAST(:targetDate AS DATE) THEN t.amount 
-                ELSE 0 
+            COALESCE(SUM(CASE
+                WHEN CAST(t.created_at AS DATE) = CAST(:targetDate AS DATE) THEN t.amount
+                ELSE 0
             END), 0) as today,
-            COALESCE(SUM(CASE 
-                WHEN CAST(t.created_at AS DATE) = CAST(:targetDate AS DATE) - INTERVAL '1 DAY' THEN t.amount 
-                ELSE 0 
+            COALESCE(SUM(CASE
+                WHEN CAST(t.created_at AS DATE) = CAST(:targetDate AS DATE) - INTERVAL '1 DAY' THEN t.amount
+                ELSE 0
             END), 0) as yesterday
         FROM hours h
-        LEFT JOIN core.transaction t ON EXTRACT(HOUR FROM t.created_at) = h.hour 
+        LEFT JOIN core.transaction t ON EXTRACT(HOUR FROM t.created_at) = h.hour
             AND t.status = 'APPROVED'
             AND t.merchant_id = :merchantId
             AND (CAST(t.created_at AS DATE) = CAST(:targetDate AS DATE) OR CAST(t.created_at AS DATE) = CAST(:targetDate AS DATE) - INTERVAL '1 DAY')
@@ -64,12 +80,12 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionEntit
     List<HourlySalesProjection> getHourlyTrend(@Param("merchantId") UUID merchantId, @Param("targetDate") LocalDateTime targetDate);
 
     @Query(value = """
-            SELECT 
-                product_type as brand, 
+            SELECT
+                product_type as brand,
                 SUM(amount) as value,
                 (SUM(amount) * 100.0 / SUM(SUM(amount)) OVER()) as percentage
             FROM core.transaction
-            WHERE merchant_id = :merchantId 
+            WHERE merchant_id = :merchantId
             AND status = 'APPROVED'
             AND created_at >= :startOfDay
             GROUP BY product_type
@@ -84,7 +100,6 @@ public interface JpaTransactionRepository extends JpaRepository<TransactionEntit
             Pageable pageable
     );
 
-    // CORREÇÃO 3: Seguir o mesmo padrão Property Traversal
     Optional<TransactionEntity> findByIdAndMerchantId(UUID id, UUID merchantId);
 
 }

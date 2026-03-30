@@ -3,9 +3,7 @@ package orionpay.merchant.infrastructure.adapters.output.persistence.reposittory
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.repository.query.Param;
 import orionpay.merchant.domain.model.ExtratoTransaction;
-import orionpay.merchant.domain.model.ExtratoTransactionDetail;
 import orionpay.merchant.domain.model.Transaction;
 import orionpay.merchant.infrastructure.adapters.output.persistence.projection.BrandDistributionProjection;
 import orionpay.merchant.infrastructure.adapters.output.persistence.projection.HourlySalesProjection;
@@ -26,6 +24,8 @@ public interface TransactionRepository {
 
     // Para conciliação e busca por comprovante (NSU)
     Optional<Transaction> findByNsu(String nsu);
+
+    TransactionSummaryProjection getSummaryByPeriod(UUID merchantId, LocalDateTime startDate, LocalDateTime endDate);
 
     TransactionSummaryProjection getDailySummary(UUID merchantId, LocalDateTime startOfDay);
 

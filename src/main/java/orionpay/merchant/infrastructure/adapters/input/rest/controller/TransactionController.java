@@ -32,8 +32,11 @@ public class TransactionController {
 
 
     @PostMapping("/authorize")
-    public ResponseEntity<TransactionResponse> authorize(@Valid @RequestBody TransactionRequest request) {
-        TransactionResponse response = authorizeUseCase.execute(request);
+    public ResponseEntity<TransactionResponse> authorize(
+            @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody TransactionRequest request
+    ) {
+        TransactionResponse response = authorizeUseCase.execute(request, idempotencyKey);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

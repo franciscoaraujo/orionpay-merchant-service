@@ -73,6 +73,7 @@ public class JwtService {
         }
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString()) // Adiciona JTI (JWT ID) para garantir unicidade absoluta do token string
                 .subject(user.getUsername())
                 .claims(claims)
                 .issuedAt(Date.from(Instant.now()))

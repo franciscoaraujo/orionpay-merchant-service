@@ -7,7 +7,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import orionpay.merchant.domain.model.ExtratoTransaction;
-import orionpay.merchant.domain.model.ExtratoTransactionDetail;
 import orionpay.merchant.domain.model.Transaction;
 import orionpay.merchant.infrastructure.adapters.output.persistence.entity.MerchantEntity;
 import orionpay.merchant.infrastructure.adapters.output.persistence.entity.TransactionEntity;
@@ -64,6 +63,11 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     @Override
     public Optional<Transaction> findByNsu(String nsu) {
         return jpaTransactionRepository.findByNsu(nsu).map(mapper::toDomain);
+    }
+
+    @Override
+    public TransactionSummaryProjection getSummaryByPeriod(UUID merchantId, LocalDateTime startDate, LocalDateTime endDate) {
+        return jpaTransactionRepository.getSummaryByPeriod(merchantId, startDate, endDate);
     }
 
     @Override

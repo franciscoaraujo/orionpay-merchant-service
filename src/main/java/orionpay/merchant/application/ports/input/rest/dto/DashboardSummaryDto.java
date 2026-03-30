@@ -16,8 +16,12 @@ import java.util.List;
 public class DashboardSummaryDto {
 
     // --- CARDS PRINCIPAIS (TOP) ---
-    private BigDecimal tpv;               // Total Processed Volume (Bruto)
-    private BigDecimal netRevenue;        // Receita Líquida (TPV - MDR)
+    private BigDecimal totalTpv;               // Total Processed Volume (Bruto)
+    private BigDecimal totalNetRevenue;        // Receita Líquida (TPV - MDR)
+    private BigDecimal ticketMedia;            // Ticket Médio (totalTpv / countTransactions)
+    private Long countTransactions;            // Número total de transações aprovadas
+    private PercentualComparison percentualComparison; // Comparação percentual vs período anterior
+
     private Double approvalRate;          // % de Aprovação
     private Long activeTerminals;         // Total de Terminais Ativos
     private BigDecimal availableBalance;  // Saldo na accounting.ledger_account
@@ -54,5 +58,19 @@ public class DashboardSummaryDto {
         private String brand;        // Nome da bandeira
         private BigDecimal value;    // Volume total
         private Double percentage;   // % representativa no TPV
+    }
+
+    /**
+     * DTO interno para a comparação percentual
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PercentualComparison {
+        private BigDecimal tpvComparison;
+        private BigDecimal netRevenueComparison;
+        private BigDecimal ticketMediaComparison;
+        private BigDecimal countTransactionsComparison;
     }
 }
