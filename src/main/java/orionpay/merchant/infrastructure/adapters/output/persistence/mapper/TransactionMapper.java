@@ -15,14 +15,16 @@ import orionpay.merchant.infrastructure.adapters.output.persistence.entity.vo.Tr
 public interface TransactionMapper {
 
     // 1. DA ENTIDADE (Banco) PARA O DOMÍNIO (Objeto Rico)
-    // Usamos o mapeamento resumido do Merchant para evitar carregar coleções lazy (pricings/terminals)
     @Mapping(source = "merchant", target = "merchant", qualifiedByName = "toDomainSummary")
+    @Mapping(source = "authCode", target = "authorizationCode")
     Transaction toDomain(TransactionEntity entity);
 
     // 2. DO DOMÍNIO PARA A ENTIDADE
-    // Ignoramos o 'merchant' aqui para o RepositoryAdapter setar via getReferenceById
     @Mapping(target = "merchant", ignore = true)
+    @Mapping(target = "terminal", ignore = true) // Setado manualmente no Adapter
     @Mapping(source = "source", target = "source")
+    @Mapping(source = "authorizationCode", target = "authCode") // Mapeia para a coluna existente
+    @Mapping(source = "authorizationCode", target = "authorizationCode") // Mapeia para a nova coluna extra
     TransactionEntity toEntity(Transaction domain);
 
     // Mapeamento explícito para o Value Object da Origem
@@ -32,7 +34,7 @@ public interface TransactionMapper {
 
     @Mapping(target = "status", expression = "java(mapStatus(transactionEntity.getStatus()))")
     @Mapping(target = "externalId", expression = "java(\"optr_\" + transactionEntity.getNsu())")
-    @Mapping(target = "brand", source = "cardBrand") // Mapeia a nova coluna card_brand se existir, ou null
+    @Mapping(target = "brand", source = "cardBrand")
     @Mapping(target = "lastFour", expression = "java(formatLastFour(transactionEntity.getCardLastFour()))")
     ExtratoTransaction toExtratoDomain(TransactionEntity transactionEntity);
 
@@ -58,7 +60,6 @@ public interface TransactionMapper {
         return "**** **** **** " + lastFour;
     }
 
-    // Nota: TransactionEntity não tem cardBrand/cardHolderName, então serão null
     @Mapping(target = "brand", source = "cardBrand") 
     @Mapping(target = "lastFour", source = "cardLastFour")
     @Mapping(target = "holderName", source = "cardHolderName")

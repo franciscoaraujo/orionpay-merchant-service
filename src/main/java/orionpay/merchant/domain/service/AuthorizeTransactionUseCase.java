@@ -10,7 +10,6 @@ import orionpay.merchant.application.ports.output.GatewayAuthorizationResult;
 import orionpay.merchant.application.ports.output.PaymentGatewayPort;
 import orionpay.merchant.domain.excepion.DomainException;
 import orionpay.merchant.domain.model.*;
-import orionpay.merchant.domain.model.enums.EntryType;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.TransactionRequest;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.TransactionResponse;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.LedgerRepository;
@@ -36,10 +35,8 @@ public class AuthorizeTransactionUseCase {
     private final RabbitTemplate rabbitTemplate;
 
     @Transactional
-    // Invalida o cache do Dashboard para este lojista, pois o saldo e métricas mudaram
     @CacheEvict(value = "dashboard_summary", key = "#request.merchantId")
     public TransactionResponse execute(TransactionRequest request, String idempotencyKey) {
-        // 1. Checagem de Idempotência
         IdempotencyResult cachedResult = idempotencyService.checkAndLock(idempotencyKey);
         if (cachedResult != null) {
             if ("SUCCESS".equals(cachedResult.getStatus())) {
@@ -53,22 +50,12 @@ public class AuthorizeTransactionUseCase {
         try {
             log.info("Iniciando autorização de transação para o merchantId: {} | Valor: {}", request.merchantId(), request.amount());
 
-            // 1. Buscar e Validar Lojista
             Merchant merchant = merchantRepository.findById(request.merchantId())
-                    .orElseThrow(() -> {
-                        log.warn("Merchant não encontrado: {}", request.merchantId());
-                        return new DomainException("Lojista não encontrado.", "MERCHANT_NOT_FOUND");
-                    });
+                    .orElseThrow(() -> new DomainException("Lojista não encontrado.", "MERCHANT_NOT_FOUND"));
 
-            // --- NOVA VALIDAÇÃO: Buscar Precificação antes de autorizar ---
-            log.debug("Buscando precificação para merchantId: {} e produto: {}", merchant.getId(), request.productType());
             var pricing = pricingRepository.findCurrentPricing(merchant.getId(), request.productType())
-                    .orElseThrow(() -> {
-                        log.error("Precificação não encontrada para merchantId: {} e produto: {}", merchant.getId(), request.productType());
-                        return new DomainException("Lojista sem configuração de taxas para " + request.productType());
-                    });
+                    .orElseThrow(() -> new DomainException("Lojista sem configuração de taxas para " + request.productType()));
 
-            // 2. Criar Transação
             Transaction transaction = new Transaction(
                     UUID.randomUUID(),
                     merchant,
@@ -77,14 +64,11 @@ public class AuthorizeTransactionUseCase {
                     new TransactionSource(request.terminalSn(), "v1.0", request.entryMode())
             );
 
-            // 3. Preencher dados seguros
             transaction.setCardInfo(request.cardBrand(), request.cardBin(), request.cardLastFour(), request.cardHolderName());
 
-            // 4. Gateway (Rede)
             log.info("Enviando transação para o Gateway. TransactionId: {}", transaction.getId());
             GatewayAuthorizationResult authResult = paymentGateway.authorize(transaction, request);
 
-            // 5. Processar Resposta
             if (!authResult.isApproved()) {
                 log.warn("Transação negada pelo Gateway. Motivo: {}", authResult.getErrorMessage());
                 transaction.decline(authResult.getErrorMessage());
@@ -95,23 +79,20 @@ public class AuthorizeTransactionUseCase {
                 throw new DomainException(errorMsg);
             }
 
-            // --- CÁLCULO DO VALOR LÍQUIDO ---
-            log.debug("Calculando valor líquido com taxa: {}%", pricing.getMdrPercentage());
             transaction.calculateNetValue(pricing.getMdrPercentage());
-
             transaction.processApproval(authResult.getNsu(), authResult.getAuthCode());
 
-            // 6. Persistir Transação
             transactionRepository.save(transaction);
             log.info("Transação autorizada e persistida com sucesso. ID: {} | NSU: {}", transaction.getId(), transaction.getNsu());
 
-            // 7. Publicar Evento para Liquidação (Motor de Liquidação Assíncrono)
+            // Envio do Evento com suporte a Parcelas
             TransactionEvent event = TransactionEvent.builder()
                     .id(UUID.randomUUID())
                     .transactionId(transaction.getId())
                     .merchantId(merchant.getId())
                     .amount(transaction.getAmount())
                     .productType(transaction.getProductType())
+                    .installments(request.installments()) // <--- Passando as parcelas
                     .status(transaction.getStatus())
                     .occurredAt(LocalDateTime.now())
                     .description("Transação autorizada para liquidação")
@@ -122,7 +103,6 @@ public class AuthorizeTransactionUseCase {
                     RabbitMQConfig.SETTLEMENT_ROUTING_KEY,
                     event
             );
-            log.info("Evento de transação enviado para o RabbitMQ. ID: {}", transaction.getId());
 
             TransactionResponse response = TransactionResponse.fromDomain(transaction, "Transação aprovada.");
             idempotencyService.saveSuccess(idempotencyKey, response);

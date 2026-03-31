@@ -30,14 +30,11 @@ public class SettlementEntryEntity {
     @Column(name = "merchant_id", nullable = false)
     private UUID merchantId;
 
-    @Column(name = "amount", precision = 19, scale = 4, nullable = false) // COLUNA EXIGIDA PELO BANCO
-    private BigDecimal amount;
+    @Column(name = "installment_number") // Novo campo para identificar a parcela
+    private Integer installmentNumber;
 
-    @Column(name = "original_amount", precision = 19, scale = 4)
-    private BigDecimal originalAmount;
-
-    @Column(name = "mdr_percentage", precision = 5, scale = 4)
-    private BigDecimal mdrPercentage;
+    @Column(name = "terminal_id")
+    private String terminalId;
 
     @Column(name = "mdr_amount", precision = 19, scale = 4, nullable = false)
     private BigDecimal mdrAmount;
@@ -48,9 +45,18 @@ public class SettlementEntryEntity {
     @Column(name = "expected_settlement_date", nullable = false)
     private LocalDateTime expectedSettlementDate;
 
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private SettlementStatus status;
+
+    @Column(name = "is_blocked")
+    private Boolean blocked;
+
+    @Column(name = "is_anticipated")
+    private Boolean anticipated;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -59,6 +65,22 @@ public class SettlementEntryEntity {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "mdr_rate", precision = 5, scale = 4)
+    private BigDecimal mdrRate;
+
+    @Column(name = "mdr_percentage", precision = 5, scale = 4)
+    private BigDecimal mdrPercentage;
+
+    @UpdateTimestamp
+    @Column(name = "processed_at", nullable = false)
+    private LocalDateTime processedAt;
+
+    @Column(name = "amount", precision = 19, scale = 4, nullable = false)
+    private BigDecimal amount;
+
+    @Column(name = "original_amount", precision = 19, scale = 4)
+    private BigDecimal originalAmount;
 
     public enum SettlementStatus {
         PENDING, SETTLED, FAILED

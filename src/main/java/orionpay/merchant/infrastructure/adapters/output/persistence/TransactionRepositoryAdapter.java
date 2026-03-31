@@ -1,7 +1,6 @@
 package orionpay.merchant.infrastructure.adapters.output.persistence;
 
 import lombok.RequiredArgsConstructor;
-
 import lombok.val;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +14,7 @@ import orionpay.merchant.infrastructure.adapters.output.persistence.projection.B
 import orionpay.merchant.infrastructure.adapters.output.persistence.projection.HourlySalesProjection;
 import orionpay.merchant.infrastructure.adapters.output.persistence.projection.TransactionSummaryProjection;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaMerchantRepository;
+import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaTerminalRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaTransactionRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.TransactionRepository;
 
@@ -29,19 +29,24 @@ import java.util.stream.Collectors;
 public class TransactionRepositoryAdapter implements TransactionRepository {
 
     private final JpaTransactionRepository jpaTransactionRepository;
-    private final JpaMerchantRepository jpaMerchantRepository; // Necessário para o vínculo
+    private final JpaMerchantRepository jpaMerchantRepository;
+    private final JpaTerminalRepository jpaTerminalRepository;
     private final TransactionMapper mapper;
 
     @Override
     public Transaction save(Transaction transaction) {
-        // 1. Converte campos simples (amount, status, nsu...)
+        // 1. Converte campos simples (amount, status, nsu, card info...)
         TransactionEntity entity = mapper.toEntity(transaction);
 
-        // 2. Busca a referência do Merchant (Proxy) para o banco setar o merchant_id
+        // 2. Busca a referência do Merchant
         MerchantEntity merchantRef = jpaMerchantRepository.getReferenceById(transaction.getMerchant().getId());
-
-        // 3. Seta o objeto na entidade
         entity.setMerchant(merchantRef);
+
+        // 3. Vínculo opcional do Terminal (se o Serial Number for informado)
+        if (transaction.getSource() != null && transaction.getSource().terminalSerialNumber() != null) {
+            jpaTerminalRepository.findBySerialNumber(transaction.getSource().terminalSerialNumber())
+                    .ifPresent(entity::setTerminal);
+        }
 
         // 4. Persiste no banco
         val savedEntity = jpaTransactionRepository.save(entity);
@@ -95,7 +100,6 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
     @Override
     public Optional<Transaction> findByIdAndMerchantId(UUID transactionId, UUID merchantId) {
         return jpaTransactionRepository.findByIdAndMerchantId(transactionId, merchantId)
-                .map(mapper::toDomain); // Converte Entity -> Domain
+                .map(mapper::toDomain);
     }
-
 }

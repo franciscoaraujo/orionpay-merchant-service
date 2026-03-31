@@ -33,11 +33,11 @@ import java.time.LocalDateTime;
 public class SettlementService {
 
     private final JpaSettlementEntryRepository settlementRepository;
-    private final JpaDailySummaryRepository dailySummaryRepository; // Novo Repositório
+    private final JpaDailySummaryRepository dailySummaryRepository;
     private final PricingRepository pricingRepository;
     private final LedgerRepository ledgerRepository;
     private final RedisTemplate<String, String> redisTemplate;
-    
+
     private static final String IDEMPOTENCY_PREFIX = "settlement:lock:";
     private static final Duration LOCK_TTL = Duration.ofHours(48);
 
@@ -48,64 +48,87 @@ public class SettlementService {
         String idempotencyKey = IDEMPOTENCY_PREFIX + event.transactionId();
 
         try {
-            log.info("Processando motor de liquidação para transação: {}", event.transactionId());
+            log.info("Iniciando motor de liquidação | Transação: {} | Parcelas: {}", 
+                    event.transactionId(), event.installments());
 
-            // 1. Idempotência no Redis
+            // 1. Idempotência por Mensagem Inteira (Redis)
             Boolean isNewRequest = redisTemplate.opsForValue().setIfAbsent(idempotencyKey, "PROCESSING", LOCK_TTL);
             if (Boolean.FALSE.equals(isNewRequest)) {
-                log.warn("Tentativa de processamento duplicado para transação: {}", event.transactionId());
+                log.warn("Processamento duplicado detectado para transação: {}", event.transactionId());
                 channel.basicAck(tag, false);
                 return;
             }
 
-            // 2. Cálculo Financeiro
+            // 2. Busca de Precificação
             var pricing = pricingRepository.findCurrentPricing(event.merchantId(), event.productType())
-                    .orElseThrow(() -> new DomainException("Precificação não encontrada para o produto: " + event.productType()));
+                    .orElseThrow(() -> new DomainException("Precificação não encontrada: " + event.productType()));
 
+            // 3. Cálculos de Rateio Proporcional (MDR e Valor Líquido)
             BigDecimal mdrRate = pricing.getMdrPercentage().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
-            BigDecimal mdrAmount = event.amount().multiply(mdrRate).setScale(4, RoundingMode.HALF_UP);
-            BigDecimal netAmount = event.amount().subtract(mdrAmount).setScale(4, RoundingMode.HALF_UP);
+            BigDecimal totalMdrAmount = event.amount().multiply(mdrRate).setScale(4, RoundingMode.HALF_UP);
+            BigDecimal totalNetAmount = event.amount().subtract(totalMdrAmount).setScale(4, RoundingMode.HALF_UP);
 
-            LocalDateTime expectedSettlementDate = event.occurredAt().plusDays(event.productType().getSettlementDays());
+            int installmentsCount = (event.installments() != null && event.installments() > 0) ? event.installments() : 1;
 
-            // 3. Persistência em ops.settlement_entry
-            SettlementEntryEntity settlementEntry = new SettlementEntryEntity();
-            settlementEntry.setTransactionId(event.transactionId());
-            settlementEntry.setMerchantId(event.merchantId());
-            settlementEntry.setAmount(event.amount());
-            settlementEntry.setMdrPercentage(pricing.getMdrPercentage());
-            settlementEntry.setMdrAmount(mdrAmount);
-            settlementEntry.setNetAmount(netAmount);
-            settlementEntry.setExpectedSettlementDate(expectedSettlementDate);
-            settlementEntry.setStatus(SettlementEntryEntity.SettlementStatus.PENDING);
-            settlementRepository.save(settlementEntry);
+            // 4. Explosão das Parcelas (Atomic Loop)
+            for (int i = 1; i <= installmentsCount; i++) {
+                
+                // Idempotência Granular por Parcela (Banco)
+                if (settlementRepository.existsByTransactionIdAndInstallmentNumber(event.transactionId(), i)) {
+                    log.debug("Parcela {} da transação {} já foi processada. Ignorando iteração.", i, event.transactionId());
+                    continue;
+                }
 
-            // 4. Escrituração Contábil (Ledger)
-            processAccounting(event, netAmount, expectedSettlementDate);
+                BigDecimal installmentAmount = event.amount().divide(BigDecimal.valueOf(installmentsCount), 4, RoundingMode.HALF_UP);
+                BigDecimal installmentNetAmount = totalNetAmount.divide(BigDecimal.valueOf(installmentsCount), 4, RoundingMode.HALF_UP);
+                BigDecimal installmentMdrAmount = totalMdrAmount.divide(BigDecimal.valueOf(installmentsCount), 4, RoundingMode.HALF_UP);
 
-            // 5. ATUALIZAÇÃO DO MODELO DE LEITURA (Sprint 1 - Read Model)
+                // Cálculo D+30 Progressivo para a Parcela i
+                LocalDateTime expectedDate = event.occurredAt().plusDays(30L * i);
+
+                SettlementEntryEntity settlementEntry = SettlementEntryEntity.builder()
+                        .transactionId(event.transactionId())
+                        .merchantId(event.merchantId())
+                        .installmentNumber(i)
+                        .terminalId(event.terminalId())
+                        .amount(installmentAmount)
+                        .originalAmount(event.amount())
+                        .mdrPercentage(pricing.getMdrPercentage())
+                        .mdrAmount(installmentMdrAmount)
+                        .netAmount(installmentNetAmount)
+                        .expectedSettlementDate(expectedDate)
+                        .status(SettlementEntryEntity.SettlementStatus.SETTLED) // Mapeado como SCHEDULED/AGENDADO no frontend
+                        .processedAt(LocalDateTime.now())
+                        .build();
+                
+                settlementRepository.save(settlementEntry);
+
+                // 5. Vínculo Contábil (Ledger) com correlation id para a parcela
+                processAccounting(event, installmentNetAmount, expectedDate, i);
+            }
+
+            // 6. Atualização do Read Model para Dashboard
             dailySummaryRepository.upsertDailyMetrics(
                     event.merchantId(),
                     event.occurredAt().toLocalDate(),
                     event.amount(),
-                    netAmount,
-                    1, // approvedInc (Sempre 1 se o evento chegou aqui aprovado)
-                    1  // totalInc
+                    totalNetAmount,
+                    1,
+                    1
             );
 
-            // 6. Finalização
             redisTemplate.opsForValue().set(idempotencyKey, "COMPLETED", LOCK_TTL);
             channel.basicAck(tag, false);
-            log.info("Liquidação e Resumo Diário atualizados com sucesso. Transação: {}", event.transactionId());
+            log.info("Liquidação finalizada com sucesso. Parcelas processadas: {}", installmentsCount);
 
         } catch (Exception e) {
-            log.error("Erro fatal no motor de liquidação: {}. Causa: {}", event.transactionId(), e.getMessage());
+            log.error("Erro fatal na liquidação parcelada: {}. Causa: {}", event.transactionId(), e.getMessage());
             redisTemplate.delete(idempotencyKey);
-            channel.basicNack(tag, false, false); 
+            channel.basicNack(tag, false, false);
         }
     }
 
-    private void processAccounting(TransactionEvent event, BigDecimal netAmount, LocalDateTime availableAt) {
+    private void processAccounting(TransactionEvent event, BigDecimal netAmount, LocalDateTime availableAt, int installmentNumber) {
         LedgerAccount account = ledgerRepository.findByMerchantId(event.merchantId())
                 .orElseThrow(() -> new DomainException("Conta contábil não encontrada para o lojista: " + event.merchantId()));
 
@@ -116,8 +139,8 @@ public class SettlementService {
                 account,
                 netAmount,
                 EntryType.CREDIT,
-                "Liquidação de Venda - Transação: " + event.transactionId(),
-                event.transactionId(),
+                "Liquidação Parcela " + installmentNumber + " - Transação: " + event.transactionId(),
+                event.transactionId(), // Correlation ID
                 availableAt
         );
     }

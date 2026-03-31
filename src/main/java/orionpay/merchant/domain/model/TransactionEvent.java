@@ -17,8 +17,10 @@ public record TransactionEvent(
         UUID merchantId,
         BigDecimal amount,
         ProductType productType,
+        Integer installments, // Novo Campo para Parcelamento
         TransactionStatus status,
         String description,
+        String terminalId,
         LocalDateTime occurredAt,
         Map<String, String> metadata
 ) {
