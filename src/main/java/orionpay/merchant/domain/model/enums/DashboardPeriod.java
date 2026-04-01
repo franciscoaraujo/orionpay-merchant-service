@@ -1,49 +1,58 @@
 package orionpay.merchant.domain.model.enums;
 
-import org.springframework.stereotype.Component;
-import orionpay.merchant.domain.model.DateRange;
-
+import lombok.Getter;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 
-/**
- * Estratégia para cálculo de períodos dinâmicos do dashboard.
- */
-@Component
+@Getter
 public enum DashboardPeriod {
-
-    HOJE {
+    HOJE("Hoje") {
         @Override
-        public DateRange getRange() {
-            LocalDateTime now = LocalDateTime.now();
-            return new DateRange(now.toLocalDate().atStartOfDay(), now);
+        public PeriodRange getRanges(LocalDate today) {
+            return new PeriodRange(today, today, today.minusDays(1), today.minusDays(1));
         }
     },
-
-    ONTEM {
+    ONTEM("Ontem") {
         @Override
-        public DateRange getRange() {
-            LocalDate yesterday = LocalDate.now().minusDays(1);
-            return new DateRange(yesterday.atStartOfDay(), yesterday.atTime(LocalTime.MAX));
+        public PeriodRange getRanges(LocalDate today) {
+            LocalDate yesterday = today.minusDays(1);
+            return new PeriodRange(yesterday, yesterday, today.minusDays(2), today.minusDays(2));
         }
     },
-
-    MES_ATUAL {
+    MES_ATUAL("Mês Atual") {
         @Override
-        public DateRange getRange() {
-            LocalDateTime now = LocalDateTime.now();
-            return new DateRange(now.toLocalDate().withDayOfMonth(1).atStartOfDay(), now);
+        public PeriodRange getRanges(LocalDate today) {
+            LocalDate startCurrent = today.withDayOfMonth(1);
+            LocalDate startPrev = startCurrent.minusMonths(1);
+            LocalDate endPrev = startPrev.withDayOfMonth(startPrev.lengthOfMonth());
+            return new PeriodRange(startCurrent, today, startPrev, endPrev);
         }
     },
-
-    ULTIMOS_30_DIAS {
+    ULTIMOS_30_DIAS("Últimos 30 Dias") {
         @Override
-        public DateRange getRange() {
-            LocalDateTime now = LocalDateTime.now();
-            return new DateRange(now.minusDays(30).toLocalDate().atStartOfDay(), now);
+        public PeriodRange getRanges(LocalDate today) {
+            LocalDate startCurrent = today.minusDays(30);
+            LocalDate startPrev = startCurrent.minusDays(30);
+            LocalDate endPrev = startCurrent.minusDays(1);
+            return new PeriodRange(startCurrent, today, startPrev, endPrev);
         }
     };
 
-    public abstract DateRange getRange();
+    private final String description;
+
+    DashboardPeriod(String description) {
+        this.description = description;
+    }
+
+    public abstract PeriodRange getRanges(LocalDate today);
+
+    public record PeriodRange(LocalDate startCurrent, LocalDate endCurrent, LocalDate startPrev, LocalDate endPrev) {}
+
+    public static DashboardPeriod fromString(String value) {
+        for (DashboardPeriod period : values()) {
+            if (period.name().equalsIgnoreCase(value)) {
+                return period;
+            }
+        }
+        return HOJE;
+    }
 }

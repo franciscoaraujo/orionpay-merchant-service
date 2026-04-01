@@ -35,7 +35,8 @@ public class AuthorizeTransactionUseCase {
     private final RabbitTemplate rabbitTemplate;
 
     @Transactional
-    @CacheEvict(value = "dashboard_summary", key = "#request.merchantId")
+    // CORREÇÃO: Limpa todos os períodos do cache do dashboard deste lojista (hoje, ontem, mes, etc.)
+    @CacheEvict(value = "dashboard_summary", allEntries = true) 
     public TransactionResponse execute(TransactionRequest request, String idempotencyKey) {
         IdempotencyResult cachedResult = idempotencyService.checkAndLock(idempotencyKey);
         if (cachedResult != null) {
@@ -85,14 +86,13 @@ public class AuthorizeTransactionUseCase {
             transactionRepository.save(transaction);
             log.info("Transação autorizada e persistida com sucesso. ID: {} | NSU: {}", transaction.getId(), transaction.getNsu());
 
-            // Envio do Evento com suporte a Parcelas
             TransactionEvent event = TransactionEvent.builder()
                     .id(UUID.randomUUID())
                     .transactionId(transaction.getId())
                     .merchantId(merchant.getId())
                     .amount(transaction.getAmount())
                     .productType(transaction.getProductType())
-                    .installments(request.installments()) // <--- Passando as parcelas
+                    .installments(request.installments())
                     .status(transaction.getStatus())
                     .occurredAt(LocalDateTime.now())
                     .description("Transação autorizada para liquidação")
