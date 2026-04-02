@@ -2,15 +2,19 @@ package orionpay.merchant.domain.service;
 
 import com.rabbitmq.client.Channel;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
+import orionpay.merchant.domain.excepion.BusinessResilienceException;
 import orionpay.merchant.domain.excepion.DomainException;
 import orionpay.merchant.domain.model.LedgerAccount;
 import orionpay.merchant.domain.model.TransactionEvent;
@@ -42,12 +46,13 @@ public class SettlementService {
     private final LedgerRepository ledgerRepository;
     private final RedisTemplate<String, String> redisTemplate;
     private final SettlementCalculator settlementCalculator = new SettlementCalculator();
+    private final ObjectProvider<SettlementService> selfProvider;
 
     private static final String IDEMPOTENCY_PREFIX = "settlement:lock:";
     private static final Duration LOCK_TTL = Duration.ofHours(48);
 
     @RabbitListener(queues = RabbitMQConfig.SETTLEMENT_PROCESS_QUEUE, ackMode = "MANUAL")
-    @Transactional
+    @Transactional(noRollbackFor = BusinessResilienceException.class)
     @Bulkhead(name = "settlementEngine", type = Bulkhead.Type.SEMAPHORE)
     public void processTransactionSettlement(TransactionEvent event, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
         String idempotencyKey = IDEMPOTENCY_PREFIX + event.transactionId();
@@ -55,28 +60,25 @@ public class SettlementService {
         try {
             log.info("Iniciando orquestração de liquidação | Transação: {}", event.transactionId());
 
-            // 1. Idempotência Distribuída (Redis Lock)
             Boolean isNewRequest = redisTemplate.opsForValue().setIfAbsent(idempotencyKey, "PROCESSING", LOCK_TTL);
             if (Boolean.FALSE.equals(isNewRequest)) {
-                log.warn("Ignorando processamento: Mensagem já em processamento ou concluída para transação: {}", event.transactionId());
+                log.info("Idempotência acionada (Redis): Transação {} já processada ou em andamento. Enviando ACK.", event.transactionId());
                 channel.basicAck(tag, false);
                 return;
             }
 
-            // 2. Busca de Precificação
             var pricing = pricingRepository.findCurrentPricing(event.merchantId(), event.productType())
-                    .orElseThrow(() -> new DomainException("Precificação não encontrada: " + event.productType()));
+                    .orElseThrow(() -> new BusinessResilienceException("Precificação não encontrada p/ " + event.productType(), "CONFIG_PENDING"));
 
-            // 3. Explosão das Parcelas
             List<SettlementCalculator.CalculatedInstallment> calculatedInstallments = 
                 settlementCalculator.calculate(event, pricing.getMdrPercentage());
 
-            // 4. Processamento Granular por Parcela
+            selfProvider.getIfAvailable().ensureLedgerAccountExists(event.merchantId());
+
             for (SettlementCalculator.CalculatedInstallment installment : calculatedInstallments) {
-                processSingleInstallment(event, installment, pricing.getMdrPercentage(), calculatedInstallments.size());
+                selfProvider.getIfAvailable().processSingleInstallment(event, installment, pricing.getMdrPercentage(), calculatedInstallments.size());
             }
 
-            // 5. Atualização do Dashboard
             dailySummaryRepository.upsertDailyMetrics(
                     event.merchantId(),
                     event.occurredAt().toLocalDate(),
@@ -88,12 +90,38 @@ public class SettlementService {
 
             redisTemplate.opsForValue().set(idempotencyKey, "COMPLETED", LOCK_TTL);
             channel.basicAck(tag, false);
-            log.info("Liquidação finalizada com sucesso para transação: {}", event.transactionId());
+            log.info("Orquestração de liquidação finalizada com sucesso para transação: {}", event.transactionId());
 
+        } catch (BusinessResilienceException e) {
+            log.error("Configuração Pendente: {}. O registro será mantido como PENDING para intervenção manual.", e.getMessage());
+            channel.basicAck(tag, false); // Removemos da fila para evitar loop infinito de erro, o PENDING será curado por batch
+        } catch (DataIntegrityViolationException e) {
+            log.info("Idempotência acionada (DB): Transação {} já processada. Ignorando duplicidade e enviando ACK.", event.transactionId());
+            channel.basicAck(tag, false);
         } catch (Exception e) {
-            log.error("Erro fatal no motor de liquidação: {}. Causa: {}", event.transactionId(), e.getMessage());
+            log.error("Erro fatal na orquestração de liquidação: {}. Causa: {}", event.transactionId(), e.getMessage());
             redisTemplate.delete(idempotencyKey);
             channel.basicNack(tag, false, false);
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void ensureLedgerAccountExists(UUID merchantId) {
+        if (ledgerRepository.findByMerchantId(merchantId).isPresent()) {
+            return;
+        }
+
+        try {
+            log.info("Tentando criar conta contábil p/ lojista: {}", merchantId);
+            LedgerAccount newAccount = LedgerAccount.create(
+                    UUID.randomUUID(),
+                    merchantId,
+                    "ACC-" + merchantId.toString().substring(0, 8).toUpperCase(),
+                    BigDecimal.ZERO
+            );
+            ledgerRepository.saveAccount(newAccount);
+        } catch (DataIntegrityViolationException e) {
+            log.info("Idempotência acionada (Ledger): Conta já existe para o lojista {}.", merchantId);
         }
     }
 
@@ -104,28 +132,19 @@ public class SettlementService {
             BigDecimal mdrPercentage,
             int totalInstallments
     ) {
-        // --- 1. CHECK-AND-SKIP (Idempotência Lógica) ---
         Optional<SettlementEntryEntity> existingEntry = settlementRepository.findByTransactionIdAndInstallmentNumber(
                 event.transactionId(), installment.getInstallmentNumber());
 
         if (existingEntry.isPresent()) {
             SettlementEntryEntity entry = existingEntry.get();
-            
-            // SE status em (SCHEDULED, SETTLED, PAID, ANTICIPATED) -> SKIP
-            if (isFinalOrScheduled(entry.getStatus())) {
-                log.info("Ignorando processamento: Transação {} Parcela {} já está em estado {}.", 
-                        event.transactionId(), installment.getInstallmentNumber(), entry.getStatus());
+            if (entry.getStatus() != SettlementStatus.PENDING) {
+                log.info("Ignorando processamento: Parcela {} já em estado {}.", installment.getInstallmentNumber(), entry.getStatus());
                 return;
             }
-            
-            // SE status é PENDING -> Tentamos a 'cura' (processamento contábil)
-            log.info("Executando cura para registro PENDING: Transação {} Parcela {}.", 
-                    event.transactionId(), installment.getInstallmentNumber());
-            performAccountingAndPromote(event, entry, installment);
+            selfProvider.getIfAvailable().callAccountingWithResilience(event, entry, installment);
             return;
         }
 
-        // --- 2. CRIAÇÃO DO REGISTRO (Draft PENDING) ---
         SettlementEntryEntity settlementEntry = SettlementEntryEntity.builder()
                 .transactionId(event.transactionId())
                 .merchantId(event.merchantId())
@@ -142,44 +161,33 @@ public class SettlementService {
                 .processedAt(LocalDateTime.now())
                 .build();
         
-        settlementRepository.saveAndFlush(settlementEntry);
-        performAccountingAndPromote(event, settlementEntry, installment);
-    }
-
-    private void performAccountingAndPromote(TransactionEvent event, SettlementEntryEntity entry, SettlementCalculator.CalculatedInstallment installment) {
         try {
-            processAccounting(event, installment.getNetAmount(), installment.getExpectedSettlementDate(), installment.getInstallmentNumber());
-            
-            entry.setStatus(SettlementStatus.SCHEDULED);
-            settlementRepository.save(entry);
-            log.info("Parcela {} promovida para SCHEDULED com sucesso.", installment.getInstallmentNumber());
-
-        } catch (Exception e) {
-            log.error("Falha no Ledger para parcela {}. Mantendo PENDING p/ reconciliação futura. Erro: {}", 
-                      installment.getInstallmentNumber(), e.getMessage());
+            settlementRepository.saveAndFlush(settlementEntry);
+            selfProvider.getIfAvailable().callAccountingWithResilience(event, settlementEntry, installment);
+        } catch (DataIntegrityViolationException e) {
+            log.info("Idempotência acionada (DB): Parcela {} da transação {} já processada. Ignorando duplicidade.", 
+                    installment.getInstallmentNumber(), event.transactionId());
         }
     }
 
-    private boolean isFinalOrScheduled(SettlementStatus status) {
-        return status == SettlementStatus.SCHEDULED || 
-               status == SettlementStatus.SETTLED || 
-               status == SettlementStatus.PAID || 
-               status == SettlementStatus.ANTICIPATED;
+    @CircuitBreaker(name = "ledgerCircuitBreaker", fallbackMethod = "fallbackLedger")
+    @Bulkhead(name = "ledgerBulkhead", fallbackMethod = "fallbackLedger")
+    public void callAccountingWithResilience(TransactionEvent event, SettlementEntryEntity entry, SettlementCalculator.CalculatedInstallment installment) {
+        processAccounting(event, installment.getNetAmount(), installment.getExpectedSettlementDate(), installment.getInstallmentNumber());
+        
+        entry.setStatus(SettlementStatus.SCHEDULED);
+        settlementRepository.save(entry);
+        log.info("Parcela {} promovida para SCHEDULED via Ledger.", installment.getInstallmentNumber());
+    }
+
+    public void fallbackLedger(TransactionEvent event, SettlementEntryEntity entry, SettlementCalculator.CalculatedInstallment installment, Throwable t) {
+        log.warn("Circuito Aberto ou Falha Temporária para Ledger. Parcela {} mantida PENDING para cura posterior. Motivo: {}", 
+                 installment.getInstallmentNumber(), t.getMessage());
     }
 
     private void processAccounting(TransactionEvent event, BigDecimal netAmount, LocalDateTime availableAt, int installmentNumber) {
         LedgerAccount account = ledgerRepository.findByMerchantId(event.merchantId())
-                .orElseGet(() -> {
-                    log.info("Criando conta contábil automática p/ lojista: {}", event.merchantId());
-                    LedgerAccount newAccount = LedgerAccount.create(
-                            UUID.randomUUID(),
-                            event.merchantId(),
-                            "ACC-" + event.merchantId().toString().substring(0, 8).toUpperCase(),
-                            BigDecimal.ZERO
-                    );
-                    ledgerRepository.saveAccount(newAccount);
-                    return newAccount;
-                });
+                .orElseThrow(() -> new BusinessResilienceException("Conta contábil não encontrada p/ lojista " + event.merchantId(), "LEDGER_ACCOUNT_MISSING"));
 
         account.applyEntry(netAmount, EntryType.CREDIT);
         ledgerRepository.saveAccount(account);

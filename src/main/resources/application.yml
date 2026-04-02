@@ -1,34 +1,34 @@
-server:
-  port: 8080 # Voltando para porta padrão HTTP enquanto não tem keystore
-  ssl:
-    enabled: false # Desabilitado até gerar o keystore.p12
-    key-store: classpath:keystore.p12
-    key-store-password: password 
-    key-store-type: PKCS12
-    key-alias: orionpay
-  http2:
-    enabled: true 
-
 spring:
   application:
-    name: merchant-service
-  
-  # Configuração explícita do Redis
+    name: orionpay-merchant-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/orion_payments
+    username: postgres
+    password: admin
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
   data:
     redis:
-      host: 127.0.0.1
+      host: localhost
       port: 6379
-
-  # Configuração do Spring Session
-  session:
-    store-type: redis
-    timeout: 30m # Tempo de vida da sessão
-
+  # --- CONFIGURAÇÃO DE E-MAIL (SMTP) ---
   mail:
     host: smtp.gmail.com
     port: 587
     username: bitwisebytes@gmail.com
-    password: clda bfty kpbs nieo
+    # ATENÇÃO: Use uma "Senha de App" gerada no Google (16 caracteres), não sua senha normal.
+    # Tutorial: https://support.google.com/accounts/answer/185833
+    password:  # Substitua isso pela Senha de App
     properties:
       mail:
         smtp:
@@ -36,63 +36,42 @@ spring:
           starttls:
             enable: true
             required: true
-        debug: true
+        debug: true # Ativa logs detalhados do JavaMail para debug
 
-  datasource:
-    url: jdbc:postgresql://localhost:5432/orion_payments?currentSchema=core,ops,sales,accounting,audit
-    username: postgres
-    password: admin
-    driver-class-name: org.postgresql.Driver
+server:
+  port: 8080
 
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: false
-        default_schema: core
-        jdbc:
-          batch_size: 20
-          order_inserts: false
-          order_updates: false
-
-  output:
-    ansi:
-      enabled: always
-
-logging:
-  config: classpath:logback-spring.xml
-
+# --- SEGURANÇA E JWT ---
 jwt:
-  secret: ${JWT_SECRET:orionpay-super-secret-key-change-me-orionpay-super-secret-key-change-me}
-  access-token-expiration-minutes: 15
+  secret: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
+  access-token-expiration-minutes: 60
   refresh-token-expiration-days: 7
 
+# --- CONFIGURAÇÃO DE RESILIÊNCIA (SRE) ---
 resilience4j:
   circuitbreaker:
     instances:
-      adquirenteService:
-        registerHealthIndicator: true
-        slidingWindowSize: 10
+      ledgerCircuitBreaker:
         failureRateThreshold: 50
         waitDurationInOpenState: 30s
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
         permittedNumberOfCallsInHalfOpenState: 3
-        automaticTransitionFromOpenToHalfOpenEnabled: true
-  retry:
-    instances:
-      adquirenteService:
-        maxAttempts: 3
-        waitDuration: 500ms
-        enableExponentialBackoff: true
-        exponentialBackoffMultiplier: 2
-        retryExceptions:
-          - java.util.concurrent.TimeoutException
-          - java.io.IOException
-          - org.springframework.web.client.ResourceAccessException
+        registerHealthIndicator: true
+        eventConsumerBufferSize: 10
   bulkhead:
     instances:
-      settlementEngine:
-        maxConcurrentCalls: 10
-        maxWaitDuration: 0
+      ledgerBulkhead:
+        maxConcurrentCalls: 5
+        maxWaitDuration: 0ms
+        registerHealthIndicator: true
+
+# Exposição de métricas para Prometheus/Grafana
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, circuitbreakers, bulkheads
+  endpoint:
+    health:
+      show-details: always

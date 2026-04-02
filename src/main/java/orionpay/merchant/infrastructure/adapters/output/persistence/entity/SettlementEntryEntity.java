@@ -7,14 +7,16 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-import orionpay.merchant.domain.model.enums.SettlementStatus; // Importando o Enum do Domínio
+import orionpay.merchant.domain.model.enums.SettlementStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "settlement_entry", schema = "ops")
+@Table(name = "settlement_entry", schema = "ops", 
+       uniqueConstraints = {@UniqueConstraint(name = "uk_settlement_transaction_installment", 
+                                            columnNames = {"transaction_id", "installment_number"})})
 @Data
 @Builder
 @NoArgsConstructor
@@ -54,7 +56,7 @@ public class SettlementEntryEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private SettlementStatus status; // Agora usa o Enum do pacote domain.model.enums
+    private SettlementStatus status;
 
     @Column(name = "is_blocked")
     private Boolean blocked;
