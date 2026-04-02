@@ -3,20 +3,18 @@ package orionpay.merchant.domain.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
+import orionpay.merchant.application.ports.output.EventPublisherPort;
 import orionpay.merchant.application.ports.output.GatewayAuthorizationResult;
 import orionpay.merchant.application.ports.output.PaymentGatewayPort;
 import orionpay.merchant.domain.excepion.DomainException;
 import orionpay.merchant.domain.model.*;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.TransactionRequest;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.TransactionResponse;
-import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.LedgerRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.MerchantRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.PricingRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.TransactionRepository;
-import orionpay.merchant.infrastructure.config.RabbitMQConfig;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -28,14 +26,12 @@ public class AuthorizeTransactionUseCase {
 
     private final MerchantRepository merchantRepository;
     private final TransactionRepository transactionRepository;
-    private final LedgerRepository ledgerRepository;
     private final PaymentGatewayPort paymentGateway;
     private final PricingRepository pricingRepository;
     private final IdempotencyService idempotencyService;
-    private final RabbitTemplate rabbitTemplate;
+    private final EventPublisherPort eventPublisher; // CORRIGIDO: Injeta a porta e não o RabbitTemplate
 
     @Transactional
-    // CORREÇÃO: Limpa todos os períodos do cache do dashboard deste lojista (hoje, ontem, mes, etc.)
     @CacheEvict(value = "dashboard_summary", allEntries = true) 
     public TransactionResponse execute(TransactionRequest request, String idempotencyKey) {
         IdempotencyResult cachedResult = idempotencyService.checkAndLock(idempotencyKey);
@@ -86,6 +82,7 @@ public class AuthorizeTransactionUseCase {
             transactionRepository.save(transaction);
             log.info("Transação autorizada e persistida com sucesso. ID: {} | NSU: {}", transaction.getId(), transaction.getNsu());
 
+            // 7. Publicar Evento via OUTBOX (Garante que se salvou a venda, o evento será enviado)
             TransactionEvent event = TransactionEvent.builder()
                     .id(UUID.randomUUID())
                     .transactionId(transaction.getId())
@@ -95,14 +92,10 @@ public class AuthorizeTransactionUseCase {
                     .installments(request.installments())
                     .status(transaction.getStatus())
                     .occurredAt(LocalDateTime.now())
-                    .description("Transação autorizada para liquidação")
+                    .description("Transação autorizada via Outbox")
                     .build();
 
-            rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.TRANSACTION_AUTHORIZED_EXCHANGE,
-                    RabbitMQConfig.SETTLEMENT_ROUTING_KEY,
-                    event
-            );
+            eventPublisher.publish(event); // Apenas salva na tabela core.outbox
 
             TransactionResponse response = TransactionResponse.fromDomain(transaction, "Transação aprovada.");
             idempotencyService.saveSuccess(idempotencyKey, response);

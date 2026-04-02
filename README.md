@@ -19,39 +19,40 @@ orionpay.merchant
 └── config           # Configurações do Spring Framework
 ```
 
-### Tecnologias Principais
-*   **Java 21** (LTS)
-*   **Spring Boot 3.x** (Web, Data JPA, Validation, AMQP, Cache)
-*   **RabbitMQ** (Mensageria e Motor de Eventos)
-*   **PostgreSQL** (Banco de Dados Relacional)
-*   **Redis** (Cache Distribuído e Idempotência)
-*   **Resilience4j** (Circuit Breaker, Retry e Bulkhead)
-*   **MapStruct** (Mapeamento de Objetos)
-*   **Lombok** (Redução de Boilerplate)
-
 ---
 
 ## ✨ Funcionalidades e Otimizações de Elite
 
-### 1. Motor de Liquidação Assíncrono (Settlement Engine)
-*   **Arquitetura Baseada em Eventos**: Transações autorizadas disparam eventos via **RabbitMQ** para processamento financeiro desacoplado.
-*   **Garantia de Idempotência**: Uso de travas distribuídas no **Redis** para evitar duplicidade de liquidação.
-*   **Resiliência Financeira**: Implementação de **Dead Letter Queues (DLQ)** para garantir que nenhuma falha de processamento resulte em perda de dados contábeis.
+### 1. Pattern Transactional Outbox (Consistência Eventual Garantida) 🛡️
+Para garantir que nenhuma venda aprovada deixe de ser liquidada, implementamos o padrão **Transactional Outbox**.
+*   **Problema Resolvido**: Evita a perda de mensagens quando o banco de dados commita a transação mas o broker de mensageria (RabbitMQ) falha.
+*   **Funcionamento**: A venda e o evento de liquidação são salvos na **mesma transação** do banco de dados (Tabela `core.outbox`). Um componente **Outbox Relay** assíncrono publica no RabbitMQ com garantia **At-Least-Once**.
 
-### 2. Resiliência e Tolerância a Falhas
-*   **Circuit Breaker & Retry**: Proteção contra falhas no Gateway de Adquirentes e serviços externos usando **Resilience4j**.
-*   **Bulkhead Isolation**: Limitação de execução concorrente no motor de liquidação para proteger a saúde do sistema em picos de carga.
-*   **Fallback Logic**: Respostas tratadas ("Sistema Indisponível") em vez de erros 500 durante instabilidades externas.
+### 2. Idempotência Lógica e Mecanismo de Cura (Check-and-Skip) 🔄
+Implementamos uma estratégia de idempotência de camada de aplicação para máxima integridade.
+*   **Check-and-Skip**: O motor de liquidação consulta o estado da parcela antes de processar. Se já estiver em estado final (`SCHEDULED`, `PAID`, etc.), a operação é ignorada para evitar duplicidade.
+*   **Mecanismo de Cura**: Caso uma parcela exista no status `PENDING` (devido a falhas anteriores no Ledger), o motor tenta completar o processamento contábil para o registro existente, em vez de criar um novo.
 
-### 3. Inteligência Financeira e Performance (Sprint 1 - Read Models)
-*   **Dashboard de Alta Performance**: Implementação de **Read Models** (Tabelas de Resumo Diário) com complexidade de leitura **O(1)**.
-*   **Upsert Atômico**: Uso de `ON CONFLICT DO UPDATE` no PostgreSQL para consolidação de métricas em tempo real (TPV, Net Revenue, Ticket Médio).
-*   **Comparação de Período Equivalente**: Inteligência de BI que compara "Hoje vs Ontem" no mesmo intervalo de horas para métricas precisas.
+### 3. Motor de Liquidação e Orquestração de Parcelas 💳
+*   **Explosão de Parcelas**: Transações de Crédito Parcelado são decompostas em múltiplos recebíveis na tabela `ops.settlement_entry`.
+*   **Resiliência Granular**: Uso de `Propagation.REQUIRES_NEW` para persistir o estado `PENDING` imediatamente, garantindo auditabilidade mesmo se o módulo contábil falhar.
 
-### 4. Segurança e Auditoria
-*   **Idempotência em API**: Header `X-Idempotency-Key` obrigatório em fluxos críticos (Saque e Autorização).
-*   **JWT com JTI**: Tokens de acesso e refresh protegidos com Identificador Único (JTI) para prevenir ataques de replay.
-*   **Ledger Imutável (Livro Razão)**: Registro rigoroso de todas as movimentações financeiras seguindo o padrão de partidas dobradas.
+### 4. Antecipação de Recebíveis com Precisão Bancária 💰
+*   **Simulação e Execução**: Cálculo de custo de antecipação pro-rata baseado na taxa real do lojista e dias restantes para liquidação (D+N).
+*   **Liquidez Imediata**: Uso de `LocalDate` para precisão bancária e crédito instantâneo no saldo disponível via Ledger.
+
+### 5. Dashboard de Alta Performance (Read Models) 📊
+*   **Métricas em Tempo Real**: Tabelas de resumo diário (`daily_merchant_summary`) com complexidade de leitura **O(1)**.
+*   **Inteligência de BI**: Filtros dinâmicos para *Hoje, Ontem, Mês Atual e Últimos 30 Dias* com comparativos de performance.
+
+---
+
+## 🛠️ Tecnologias Principais
+*   **Java 21** & **Spring Boot 3.x**
+*   **RabbitMQ**: Mensageria e eventos.
+*   **PostgreSQL**: Banco de dados relacional.
+*   **Redis**: Cache e locks de idempotência.
+*   **MapStruct**: Mapeamento de objetos.
 
 ---
 
@@ -60,44 +61,12 @@ orionpay.merchant
 ### Pré-requisitos
 *   Java 21 JDK
 *   Maven
-*   PostgreSQL (Local ou Docker)
-*   Redis (Local ou Docker)
-*   RabbitMQ (Local ou Docker)
+*   Infraestrutura (PostgreSQL, Redis, RabbitMQ)
 
-### 1. Configuração da Infraestrutura (Docker)
-```bash
-# Subir Redis e RabbitMQ rapidamente
-docker run -d --name redis -p 6379:6379 redis
-docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
-```
-
-### 2. Configuração do Banco de Dados
-O `application.yml` está configurado para:
-*   URL: `jdbc:postgresql://localhost:5432/orion_payments`
-*   User: `postgres`
-*   Pass: `admin`
-
-*Dica: Certifique-se de que o schema `ops` e `accounting` existam no seu banco.*
-
-### 3. Executando a Aplicação
+### Executando a Aplicação
 ```bash
 mvn spring-boot:run
 ```
-
----
-
-## 📚 Endpoints Principais
-
-*   **Autorizar Transação**: `POST /api/v1/transactions/authorize` (Requer `X-Idempotency-Key`)
-*   **Dashboard Summary**: `GET /api/v1/dashboard/{merchantId}/summary`
-*   **Solicitar Saque**: `POST /api/v1/withdrawals` (Requer `X-Idempotency-Key`)
-*   **Extrato de Transações**: `GET /api/v1/transactions/{merchantId}/extrato`
-
----
-
-## 🛡️ Decisões Técnicas de Escala
-*   **Separação de Preocupações**: A lógica de autorização (rápida) é separada da lógica de liquidação (lenta/complexa) via mensageria.
-*   **Escalabilidade de Leitura**: O Dashboard lê resumos pré-calculados, permitindo que o sistema suporte milhões de usuários simultâneos sem degradar a performance do banco.
 
 ---
 

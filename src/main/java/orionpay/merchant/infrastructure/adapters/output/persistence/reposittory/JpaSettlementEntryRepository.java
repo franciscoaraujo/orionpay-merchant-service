@@ -19,7 +19,15 @@ import java.util.List;
 @Repository
 public interface JpaSettlementEntryRepository extends JpaRepository<SettlementEntryEntity, UUID> {
 
-    // CORREÇÃO: Filtra por status SCHEDULED (o novo estado pós-ledger)
+    Optional<SettlementEntryEntity> findByTransactionIdAndInstallmentNumber(UUID transactionId, Integer installmentNumber);
+
+    boolean existsByTransactionIdAndInstallmentNumber(UUID transactionId, Integer installmentNumber);
+
+    @Query("SELECT se.status FROM SettlementEntryEntity se WHERE se.transactionId = :transactionId AND se.installmentNumber = :installmentNumber")
+    Optional<SettlementStatus> findStatusByTransactionIdAndInstallmentNumber(
+            @Param("transactionId") UUID transactionId, 
+            @Param("installmentNumber") Integer installmentNumber);
+
     @Query("""
             SELECT se FROM SettlementEntryEntity se 
             WHERE se.merchantId = :merchantId 
@@ -30,8 +38,6 @@ public interface JpaSettlementEntryRepository extends JpaRepository<SettlementEn
             ORDER BY se.expectedSettlementDate ASC
             """)
     List<SettlementEntryEntity> findAvailableForAnticipation(@Param("merchantId") UUID merchantId);
-
-    boolean existsByTransactionIdAndInstallmentNumber(UUID transactionId, Integer installmentNumber);
 
     @Query(value = """
             SELECT 
