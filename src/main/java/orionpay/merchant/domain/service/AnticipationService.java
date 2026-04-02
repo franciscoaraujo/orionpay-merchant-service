@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import orionpay.merchant.domain.excepion.DomainException;
 import orionpay.merchant.domain.model.LedgerAccount;
 import orionpay.merchant.domain.model.enums.EntryType;
+import orionpay.merchant.domain.model.enums.SettlementStatus; // Importando o Enum do Domínio
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.AnticipationRequest;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.AnticipationResponse;
 import orionpay.merchant.infrastructure.adapters.output.persistence.entity.PricingEntity;
@@ -53,7 +54,6 @@ public class AnticipationService {
 
         List<AnticipationResponse.AvailableSettlement> items = availableEntries.stream()
                 .map(entry -> {
-                    // USO DE LOCALDATE: Resolve o problema de vir "0 dias" por causa do horário
                     long daysToAnticipate = ChronoUnit.DAYS.between(today, entry.getExpectedSettlementDate().toLocalDate());
                     if (daysToAnticipate <= 0) daysToAnticipate = 0;
 
@@ -107,17 +107,15 @@ public class AnticipationService {
 
             BigDecimal netAfterAnticipation = entry.getNetAmount().subtract(cost);
 
-            // 1. Atualiza o registro de liquidação
             entry.setAnticipated(true);
-            entry.setNetAmount(netAfterAnticipation); // Agora o valor líquido reflete o custo
-            entry.setStatus(SettlementEntryEntity.SettlementStatus.SETTLED);
-            entry.setExpectedSettlementDate(LocalDateTime.now()); // Antecipado para hoje!
+            entry.setNetAmount(netAfterAnticipation);
+            entry.setStatus(SettlementStatus.ANTICIPATED); // Usando o Enum do Domínio
+            entry.setExpectedSettlementDate(LocalDateTime.now());
             settlementRepository.save(entry);
 
             totalAnticipatedNet = totalAnticipatedNet.add(netAfterAnticipation);
         }
 
-        // 2. Escrituração Contábil: Crédito imediato no saldo do lojista
         if (totalAnticipatedNet.compareTo(BigDecimal.ZERO) > 0) {
             processAccounting(merchantId, totalAnticipatedNet);
         }

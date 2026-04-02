@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import orionpay.merchant.domain.model.enums.SettlementStatus; // Importando o Enum do Domínio
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -30,8 +31,11 @@ public class SettlementEntryEntity {
     @Column(name = "merchant_id", nullable = false)
     private UUID merchantId;
 
-    @Column(name = "installment_number") // Novo campo para identificar a parcela
+    @Column(name = "installment_number")
     private Integer installmentNumber;
+
+    @Column(name = "total_installments")
+    private Integer totalInstallments;
 
     @Column(name = "terminal_id")
     private String terminalId;
@@ -50,7 +54,7 @@ public class SettlementEntryEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private SettlementStatus status;
+    private SettlementStatus status; // Agora usa o Enum do pacote domain.model.enums
 
     @Column(name = "is_blocked")
     private Boolean blocked;
@@ -81,8 +85,4 @@ public class SettlementEntryEntity {
 
     @Column(name = "original_amount", precision = 19, scale = 4)
     private BigDecimal originalAmount;
-
-    public enum SettlementStatus {
-        PENDING, SETTLED, FAILED
-    }
 }

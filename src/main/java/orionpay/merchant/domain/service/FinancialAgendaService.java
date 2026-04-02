@@ -82,21 +82,20 @@ public class FinancialAgendaService {
 
     private String mapInstallmentLabel(AgendaItemProjection projection) {
         if (projection.getInstallmentNumber() == null) return "1/1";
-        
-        // Simulação: se original amount > gross amount, inferimos que é parcelado.
-        // O ideal é ter o installments_total no banco. Como não temos, usaremos o label básico
         return projection.getInstallmentNumber().toString();
     }
 
     private String mapStatus(AgendaItemProjection projection) {
         if (projection.getPaidAt() != null) return "PAGO";
-        if ("SETTLED".equalsIgnoreCase(projection.getStatus())) return "AGENDADO";
+        // CORREÇÃO: SCHEDULED deve ser mapeado como AGENDADO para o lojista
+        if ("SCHEDULED".equalsIgnoreCase(projection.getStatus())) return "AGENDADO";
+        if ("ANTICIPATED".equalsIgnoreCase(projection.getStatus())) return "ANTECIPADO";
         return "PENDENTE";
     }
 
     private String mapTitularidade(AgendaItemProjection projection) {
         if (Boolean.TRUE.equals(projection.getBlocked())) return "VINCULADO A GARANTIA";
-        if (Boolean.TRUE.equals(projection.getAnticipated())) return "ANTECIPADO";
+        if (Boolean.TRUE.equals(projection.getAnticipated()) || "ANTICIPATED".equalsIgnoreCase(projection.getStatus())) return "ANTECIPADO";
         return "DISPONÍVEL";
     }
 

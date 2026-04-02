@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import orionpay.merchant.domain.model.enums.SettlementStatus;
 import orionpay.merchant.infrastructure.adapters.output.persistence.entity.SettlementEntryEntity;
 import orionpay.merchant.infrastructure.adapters.output.persistence.projection.AgendaItemProjection;
 
@@ -18,11 +19,11 @@ import java.util.List;
 @Repository
 public interface JpaSettlementEntryRepository extends JpaRepository<SettlementEntryEntity, UUID> {
 
-    // Lógica para Antecipação: Filtra o que ainda não caiu (D+N) e não está bloqueado
+    // CORREÇÃO: Filtra por status SCHEDULED (o novo estado pós-ledger)
     @Query("""
             SELECT se FROM SettlementEntryEntity se 
             WHERE se.merchantId = :merchantId 
-            AND se.status = orionpay.merchant.infrastructure.adapters.output.persistence.entity.SettlementEntryEntity.SettlementStatus.SETTLED
+            AND se.status = orionpay.merchant.domain.model.enums.SettlementStatus.SCHEDULED
             AND se.expectedSettlementDate > CURRENT_TIMESTAMP
             AND (se.blocked IS NULL OR se.blocked = false)
             AND (se.anticipated IS NULL OR se.anticipated = false)
