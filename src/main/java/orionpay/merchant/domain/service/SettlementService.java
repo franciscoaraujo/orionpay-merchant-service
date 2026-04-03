@@ -25,7 +25,7 @@ import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaSettlementEntryRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.LedgerRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.PricingRepository;
-import orionpay.merchant.infrastructure.config.RabbitMQConfig;
+import orionpay.merchant.config.RabbitMQConfig; // CORRIGIDO: Novo pacote
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -94,7 +94,7 @@ public class SettlementService {
 
         } catch (BusinessResilienceException e) {
             log.error("Configuração Pendente: {}. O registro será mantido como PENDING para intervenção manual.", e.getMessage());
-            channel.basicAck(tag, false); // Removemos da fila para evitar loop infinito de erro, o PENDING será curado por batch
+            channel.basicAck(tag, false);
         } catch (DataIntegrityViolationException e) {
             log.info("Idempotência acionada (DB): Transação {} já processada. Ignorando duplicidade e enviando ACK.", event.transactionId());
             channel.basicAck(tag, false);

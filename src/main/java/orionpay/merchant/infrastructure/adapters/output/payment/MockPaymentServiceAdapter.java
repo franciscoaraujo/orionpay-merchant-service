@@ -16,7 +16,7 @@ public class MockPaymentServiceAdapter implements PaymentServicePort {
         
         // Simulação de latência de rede bancária
         try {
-            Thread.sleep(500); 
+            Thread.sleep(50000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

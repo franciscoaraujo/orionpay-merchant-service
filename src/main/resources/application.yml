@@ -1,6 +1,9 @@
 spring:
   application:
+    port: 8085
     name: orionpay-merchant-service
+
+
   datasource:
     url: jdbc:postgresql://localhost:5432/orion_payments
     username: postgres

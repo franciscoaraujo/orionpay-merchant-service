@@ -39,7 +39,8 @@ public class LedgerRepositoryAdapter implements LedgerRepository {
 
     @Override
     public void saveAccount(LedgerAccount account) {
-        LedgerAccountEntity entity = jpaLedgerAccountRepository.findById(account.getAccountId())
+        LedgerAccountEntity entity = jpaLedgerAccountRepository
+                .findById(account.getAccountId())
                 .map(existingEntity -> {
                     ledgerMapper.updateEntityFromDomain(account, existingEntity);
                     return existingEntity;

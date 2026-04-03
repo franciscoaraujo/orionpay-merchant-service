@@ -46,7 +46,6 @@ public interface JpaLedgerEntryRepository extends JpaRepository<LedgerEntryEntit
        """)
     BigDecimal sumFutureReceivables(@Param("merchantId") UUID merchantId);
 
-    // Soma Créditos Disponíveis e subtrai Todos os Débitos
     @Query("""
        SELECT COALESCE(SUM(
            CASE 
@@ -63,28 +62,27 @@ public interface JpaLedgerEntryRepository extends JpaRepository<LedgerEntryEntit
     /**
      * QUERY OTIMIZADA DASHBOARD:
      * Retorna Disponível e Futuro em uma única execução.
-     * 1. Available: (Créditos Disponíveis - Todos os Débitos)
-     * 2. Future: (Apenas Créditos Futuros)
      */
     @Query(value = """
-        SELECT 
-            COALESCE(SUM(
-                CASE 
-                    WHEN e.type = 'DEBIT' THEN -e.amount
-                    WHEN e.type = 'CREDIT' AND e.available_at <= NOW() THEN e.amount
-                    ELSE 0 
-                END
-            ), 0) as availableBalance,
-            
-            COALESCE(SUM(
-                CASE 
-                    WHEN e.type = 'CREDIT' AND e.available_at > NOW() THEN e.amount
-                    ELSE 0 
-                END
-            ), 0) as futureReceivables
-        FROM accounting.ledger_entry e
-        JOIN accounting.ledger_account a ON e.account_id = a.id
-        WHERE a.merchant_id = :merchantId
-    """, nativeQuery = true)
+    SELECT 
+        COALESCE(SUM(
+            CASE 
+                WHEN e.type IN ('CREDIT', 'REVENUE', 'SETTLEMENT', 'WITHDRAWAL_REVERSAL') 
+                     AND e.available_at <= NOW() THEN e.amount
+                WHEN e.type IN ('DEBIT', 'WITHDRAWAL_HOLD') THEN -e.amount
+                ELSE 0 
+            END
+        ), 0) as availableBalance,
+        
+        COALESCE(SUM(
+            CASE 
+                WHEN e.type IN ('CREDIT', 'REVENUE') AND e.available_at > NOW() THEN e.amount
+                ELSE 0 
+            END
+        ), 0) as futureReceivables
+    FROM accounting.ledger_entry e
+    JOIN accounting.ledger_account a ON e.account_id = a.id
+    WHERE a.merchant_id = :merchantId
+""", nativeQuery = true)
     LedgerBalanceProjection getBalances(@Param("merchantId") UUID merchantId);
 }

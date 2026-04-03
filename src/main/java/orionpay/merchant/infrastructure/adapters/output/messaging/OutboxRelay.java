@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import orionpay.merchant.domain.model.TransactionEvent;
 import orionpay.merchant.infrastructure.adapters.output.persistence.entity.OutboxEventEntity;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaOutboxRepository;
-import orionpay.merchant.infrastructure.config.RabbitMQConfig;
+import orionpay.merchant.config.RabbitMQConfig; // CORRIGIDO: Novo pacote
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,14 +37,12 @@ public class OutboxRelay {
             try {
                 TransactionEvent domainEvent = objectMapper.readValue(event.getPayload(), TransactionEvent.class);
 
-                // Publica no RabbitMQ
                 rabbitTemplate.convertAndSend(
                         RabbitMQConfig.TRANSACTION_AUTHORIZED_EXCHANGE,
                         RabbitMQConfig.SETTLEMENT_ROUTING_KEY,
                         domainEvent
                 );
 
-                // Atualiza status p/ PROCESSED
                 event.setStatus(OutboxEventEntity.OutboxStatus.PROCESSED);
                 event.setProcessedAt(LocalDateTime.now());
                 outboxRepository.save(event);
