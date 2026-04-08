@@ -9,9 +9,11 @@ import org.springframework.stereotype.Repository;
 import orionpay.merchant.domain.model.enums.SettlementStatus;
 import orionpay.merchant.infrastructure.adapters.output.persistence.entity.SettlementEntryEntity;
 import orionpay.merchant.infrastructure.adapters.output.persistence.projection.AgendaItemProjection;
+import orionpay.merchant.infrastructure.adapters.output.persistence.projection.DailyScheduleProjection;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.UUID;
 import java.util.Optional;
 import java.util.List;
@@ -23,18 +25,17 @@ public interface JpaSettlementEntryRepository extends JpaRepository<SettlementEn
 
     boolean existsByTransactionIdAndInstallmentNumber(UUID transactionId, Integer installmentNumber);
 
-    @Query("SELECT se.status FROM SettlementEntryEntity se WHERE se.transactionId = :transactionId AND se.installmentNumber = :installmentNumber")
-    Optional<SettlementStatus> findStatusByTransactionIdAndInstallmentNumber(
-            @Param("transactionId") UUID transactionId, 
-            @Param("installmentNumber") Integer installmentNumber);
-
     @Query("""
             SELECT se FROM SettlementEntryEntity se 
             WHERE se.merchantId = :merchantId 
-            AND se.status = orionpay.merchant.domain.model.enums.SettlementStatus.SCHEDULED
+            AND se.status IN (
+                orionpay.merchant.domain.model.enums.SettlementStatus.SCHEDULED, 
+                orionpay.merchant.domain.model.enums.SettlementStatus.SETTLED
+            )
             AND se.expectedSettlementDate > CURRENT_TIMESTAMP
             AND (se.blocked IS NULL OR se.blocked = false)
             AND (se.anticipated IS NULL OR se.anticipated = false)
+            AND se.status != orionpay.merchant.domain.model.enums.SettlementStatus.DISPUTE
             ORDER BY se.expectedSettlementDate ASC
             """)
     List<SettlementEntryEntity> findAvailableForAnticipation(@Param("merchantId") UUID merchantId);
@@ -100,6 +101,29 @@ public interface JpaSettlementEntryRepository extends JpaRepository<SettlementEn
             WHERE se.id = :id
             """, nativeQuery = true)
     Optional<AgendaItemProjection> findDetailById(@Param("id") UUID id);
+
+    @Query(value = """
+            SELECT
+                -- Forçamos a truncagem para o dia para garantir o agrupamento correto
+                DATE_TRUNC('day', se.expected_settlement_date) as settlementDate,
+                COALESCE(SUM(se.amount), 0) as totalGross,
+                COALESCE(SUM(se.net_amount), 0) as totalNet,
+                STRING_AGG(DISTINCT se.status, ',') as statuses,
+                COUNT(se.id) as count
+            FROM ops.settlement_entry se
+            WHERE se.merchant_id = :merchantId
+            -- Uso de BETWEEN com cast explícito para evitar problemas de tipo
+            AND se.expected_settlement_date BETWEEN CAST(:startDate AS TIMESTAMP) AND (CAST(:endDate AS TIMESTAMP) + INTERVAL '1 day' - INTERVAL '1 second')
+            AND (:status IS NULL OR se.status::text = :status)
+            GROUP BY 1
+            ORDER BY 1 ASC
+            """, nativeQuery = true)
+    List<DailyScheduleProjection> findDailySchedule(
+            @Param("merchantId") UUID merchantId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("status") String status
+    );
 
     @Query(value = "SELECT COALESCE(SUM(amount), 0) FROM ops.settlement_entry WHERE merchant_id = :merchantId AND expected_settlement_date >= :start AND expected_settlement_date <= :end", nativeQuery = true)
     BigDecimal sumGrossAmountByPeriod(@Param("merchantId") UUID merchantId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);

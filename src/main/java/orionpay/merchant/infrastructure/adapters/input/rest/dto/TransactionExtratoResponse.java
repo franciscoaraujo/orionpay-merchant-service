@@ -1,4 +1,4 @@
-package orionpay.merchant.domain.model;
+package orionpay.merchant.infrastructure.adapters.input.rest.dto;
 
 import lombok.Builder;
 import lombok.Data;
@@ -11,13 +11,13 @@ import java.util.UUID;
 
 @Data
 @Builder
-public class ExtratoTransaction {
+public class TransactionExtratoResponse {
     private UUID id;
-    private String nsu;
     private BigDecimal amount;
     private BigDecimal netAmount;
     private ProductType productType;
     private TransactionStatus status;
+    private String nsu;
     private String authCode;
     private String cardBrand;
     private String cardLastFour;

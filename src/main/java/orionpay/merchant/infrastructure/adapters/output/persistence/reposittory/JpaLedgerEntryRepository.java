@@ -21,6 +21,50 @@ public interface JpaLedgerEntryRepository extends JpaRepository<LedgerEntryEntit
     boolean existsByCorrelationIdAndType(UUID correlationId, EntryType type);
 
     @Query("""
+       SELECT COALESCE(SUM(
+           CASE 
+               WHEN e.type IN ('CREDIT', 'PREPAYMENT_CREDIT', 'WITHDRAWAL_REVERSAL', 'REFUND_REVERSAL') AND e.availableAt <= CURRENT_TIMESTAMP THEN e.amount 
+               WHEN e.type IN ('DEBIT', 'WITHDRAWAL_HOLD', 'WITHDRAWAL_COMPLETED', 'PREPAYMENT_FEE', 'REFUND_HOLD', 'REFUND_DEBIT') THEN -e.amount 
+               ELSE 0 
+           END
+       ), 0)
+       FROM LedgerEntryEntity e
+       WHERE e.ledgerAccount.merchantId = :merchantId
+       """)
+    BigDecimal calculateRealAvailableBalance(@Param("merchantId") UUID merchantId);
+
+    /**
+     * QUERY HÍBRIDA DASHBOARD (Fonte de Verdade):
+     * 1. availableBalance: Vem do LEDGER (Créditos - Débitos passados)
+     * 2. futureReceivables: Vem da AGENDA (Apenas SCHEDULED não bloqueados)
+     * 3. blockedAmount: Vem da AGENDA (Registros Bloqueados)
+     */
+    @Query(value = """
+        SELECT 
+            -- SALDO DISPONÍVEL (LEDGER)
+            (SELECT COALESCE(SUM(
+                CASE 
+                    WHEN le.type IN ('CREDIT', 'PREPAYMENT_CREDIT', 'WITHDRAWAL_REVERSAL', 'REFUND_REVERSAL') AND le.available_at <= NOW() THEN le.amount
+                    WHEN le.type IN ('DEBIT', 'WITHDRAWAL_HOLD', 'WITHDRAWAL_COMPLETED', 'PREPAYMENT_FEE', 'REFUND_HOLD', 'REFUND_DEBIT') THEN -le.amount
+                    ELSE 0 
+                END
+            ), 0) FROM accounting.ledger_entry le JOIN accounting.ledger_account la ON le.account_id = la.id WHERE la.merchant_id = :merchantId) as availableBalance,
+            
+            -- A RECEBER (AGENDA - Somente Agendados e Não Antecipados)
+            (SELECT COALESCE(SUM(se.net_amount), 0) FROM ops.settlement_entry se 
+             WHERE se.merchant_id = :merchantId 
+             AND se.status = 'SCHEDULED' 
+             AND (se.is_blocked = false OR se.is_blocked IS NULL)
+             AND (se.is_anticipated = false OR se.is_anticipated IS NULL)) as futureReceivables,
+             
+            -- COMPROMETIDO / BLOQUEADO (AGENDA)
+            (SELECT COALESCE(SUM(se.net_amount), 0) FROM ops.settlement_entry se 
+             WHERE se.merchant_id = :merchantId 
+             AND se.is_blocked = true) as blockedAmount
+    """, nativeQuery = true)
+    LedgerBalanceProjection getBalances(@Param("merchantId") UUID merchantId);
+
+    @Query("""
        SELECT COALESCE(SUM(e.amount), 0)
        FROM LedgerEntryEntity e
        WHERE e.ledgerAccount.merchantId = :merchantId
@@ -45,44 +89,4 @@ public interface JpaLedgerEntryRepository extends JpaRepository<LedgerEntryEntit
          AND e.availableAt > CURRENT_TIMESTAMP
        """)
     BigDecimal sumFutureReceivables(@Param("merchantId") UUID merchantId);
-
-    @Query("""
-       SELECT COALESCE(SUM(
-           CASE 
-               WHEN e.type = 'CREDIT' AND e.availableAt <= CURRENT_TIMESTAMP THEN e.amount 
-               WHEN e.type = 'DEBIT' THEN -e.amount 
-               ELSE 0 
-           END
-       ), 0)
-       FROM LedgerEntryEntity e
-       WHERE e.ledgerAccount.merchantId = :merchantId
-       """)
-    BigDecimal calculateRealAvailableBalance(@Param("merchantId") UUID merchantId);
-
-    /**
-     * QUERY OTIMIZADA DASHBOARD:
-     * Retorna Disponível e Futuro em uma única execução.
-     */
-    @Query(value = """
-    SELECT 
-        COALESCE(SUM(
-            CASE 
-                WHEN e.type IN ('CREDIT', 'REVENUE', 'SETTLEMENT', 'WITHDRAWAL_REVERSAL') 
-                     AND e.available_at <= NOW() THEN e.amount
-                WHEN e.type IN ('DEBIT', 'WITHDRAWAL_HOLD') THEN -e.amount
-                ELSE 0 
-            END
-        ), 0) as availableBalance,
-        
-        COALESCE(SUM(
-            CASE 
-                WHEN e.type IN ('CREDIT', 'REVENUE') AND e.available_at > NOW() THEN e.amount
-                ELSE 0 
-            END
-        ), 0) as futureReceivables
-    FROM accounting.ledger_entry e
-    JOIN accounting.ledger_account a ON e.account_id = a.id
-    WHERE a.merchant_id = :merchantId
-""", nativeQuery = true)
-    LedgerBalanceProjection getBalances(@Param("merchantId") UUID merchantId);
 }

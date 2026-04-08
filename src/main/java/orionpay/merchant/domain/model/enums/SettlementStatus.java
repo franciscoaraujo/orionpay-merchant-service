@@ -1,12 +1,13 @@
 package orionpay.merchant.domain.model.enums;
 
 public enum SettlementStatus {
-    PENDING,     // Registro criado, aguardando Ledger
-    SCHEDULED,   // Contabilizado, aguardando data de vencimento (Aparece na Agenda)
-    ANTICIPATED, // Valor já pago via antecipação
+    PENDING,     // Criado, aguardando Ledger
+    SCHEDULED,   // Contabilizado, aguardando vencimento
+    ANTICIPATED, // Antecipado pelo lojista
     BLOCKED,     // Travado (Garantia/Fraude)
-    SETTLED,     // Pronto para envio ao banco (Payout iniciado)
-    PAID,        // Confirmado pelo banco (Fim do ciclo)
-    DISPUTE,     // Contestação em curso
-    FAILED       // Erro de processamento
+    SETTLED,     // Pronto para payout
+    PAID,        // Pago efetivamente ao lojista
+    DISPUTE,     // Em disputa (Chargeback)
+    FAILED,      // Erro de processamento
+    PREPAID      // Liquidado antecipadamente
 }

@@ -46,8 +46,9 @@ public class AnticipationService {
         log.info("Simulando antecipação para Merchant: {}", merchantId);
 
         BigDecimal monthlyFee = getAnticipationFee(merchantId);
-        BigDecimal dailyFee = monthlyFee.divide(BigDecimal.valueOf(30), 8, RoundingMode.HALF_UP)
-                                       .divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_UP);
+        BigDecimal dailyFee = monthlyFee
+                .divide(BigDecimal.valueOf(30), 8, RoundingMode.HALF_UP)
+                .divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_UP);
 
         List<SettlementEntryEntity> availableEntries = settlementRepository.findAvailableForAnticipation(merchantId);
         LocalDate today = LocalDate.now();
@@ -87,11 +88,11 @@ public class AnticipationService {
     @Transactional
     public void executeAnticipation(UUID merchantId, AnticipationRequest request) {
         log.info("Executando antecipação para merchant: {} | Itens: {}", merchantId, request.settlementIds().size());
-        
+
         BigDecimal monthlyFee = getAnticipationFee(merchantId);
         BigDecimal dailyFee = monthlyFee.divide(BigDecimal.valueOf(30), 8, RoundingMode.HALF_UP)
-                                       .divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_UP);
-        
+                .divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_UP);
+
         LocalDate today = LocalDate.now();
         BigDecimal totalAnticipatedNet = BigDecimal.ZERO;
 

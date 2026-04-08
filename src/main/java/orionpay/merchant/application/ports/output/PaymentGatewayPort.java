@@ -8,4 +8,9 @@ public interface PaymentGatewayPort {
      * Envia a transação para o autorizador externo (Adquirente/Bandeira).
      */
     GatewayAuthorizationResult authorize(Transaction transaction, TransactionRequest request);
+
+    /**
+     * Solicita o estorno de uma transação aprovada junto ao gateway.
+     */
+    boolean refund(Transaction transaction, String reason);
 }

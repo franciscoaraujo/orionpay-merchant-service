@@ -59,10 +59,19 @@ public class SettlementEntryEntity {
     private SettlementStatus status;
 
     @Column(name = "is_blocked")
-    private Boolean blocked;
+    private Boolean blocked = false;
+
+    @Column(name = "is_collateral")
+    private Boolean isCollateral = false; // Vinculado a Garantia de Empréstimo
+
+    @Column(name = "blocked_reason")
+    private String blockedReason;
 
     @Column(name = "is_anticipated")
-    private Boolean anticipated;
+    private Boolean anticipated = false;
+
+    @Column(name = "prepayment_batch_id")
+    private UUID prepaymentBatchId;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -71,9 +80,6 @@ public class SettlementEntryEntity {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-
-    @Column(name = "mdr_rate", precision = 5, scale = 4)
-    private BigDecimal mdrRate;
 
     @Column(name = "mdr_percentage", precision = 5, scale = 4)
     private BigDecimal mdrPercentage;

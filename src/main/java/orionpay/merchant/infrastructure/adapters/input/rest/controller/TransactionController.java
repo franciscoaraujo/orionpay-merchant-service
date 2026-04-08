@@ -1,58 +1,59 @@
 package orionpay.merchant.infrastructure.adapters.input.rest.controller;
 
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import orionpay.merchant.domain.model.ExtratoTransaction;
+import orionpay.merchant.config.AuthenticatedUser;
 import orionpay.merchant.domain.service.AuthorizeTransactionUseCase;
-import orionpay.merchant.domain.service.GetTransactionDetailUseCase;
 import orionpay.merchant.domain.service.GetTransactionExtratoUseCase;
+import orionpay.merchant.domain.service.RefundTransactionUseCase;
+import orionpay.merchant.infrastructure.adapters.input.rest.dto.RefundRequest;
+import orionpay.merchant.infrastructure.adapters.input.rest.dto.TransactionExtratoResponse;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.TransactionRequest;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.TransactionResponse;
-import orionpay.merchant.domain.model.ExtratoTransactionDetail;
+import orionpay.merchant.infrastructure.adapters.input.rest.security.SecurityContextService;
 
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/transactions")
-@CrossOrigin(origins = "*", allowedHeaders = "*") // Permite CORS para todos (dev) ou ajuste para localhost:3000
 @RequiredArgsConstructor
 public class TransactionController {
 
     private final AuthorizeTransactionUseCase authorizeUseCase;
-    private final GetTransactionExtratoUseCase getTransactionExtratoUseCase;
-    private final GetTransactionDetailUseCase getTransactionDetailUseCase;
-
+    private final GetTransactionExtratoUseCase getExtratoUseCase;
+    private final RefundTransactionUseCase refundUseCase;
+    private final SecurityContextService securityContextService;
 
     @PostMapping("/authorize")
     public ResponseEntity<TransactionResponse> authorize(
-            @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
-            @Valid @RequestBody TransactionRequest request
+            @Valid @RequestBody TransactionRequest request,
+            @RequestHeader("X-Idempotency-Key") String idempotencyKey
     ) {
         TransactionResponse response = authorizeUseCase.execute(request, idempotencyKey);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{merchantId}/extrato")
-    public ResponseEntity<Page<ExtratoTransaction>> getExtrato(
-            @PathVariable UUID merchantId,
-            @RequestParam(required = false) String search,
-            @PageableDefault(size = 15, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-
-        return ResponseEntity.ok(getTransactionExtratoUseCase.execute(merchantId, search, pageable));
+    @GetMapping("/extrato")
+    public ResponseEntity<Page<TransactionExtratoResponse>> getExtrato(
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        UUID merchantId = securityContextService.getCurrentMerchantId();
+        Page<TransactionExtratoResponse> extrato = getExtratoUseCase.execute(merchantId, pageable);
+        return ResponseEntity.ok(extrato);
     }
 
-    @GetMapping("/{transactionId}/detail")
-    public ResponseEntity<ExtratoTransactionDetail> getDetail(
-            @PathVariable UUID transactionId,
-            @RequestHeader("X-Merchant-Id") UUID merchantId) {
-        return ResponseEntity.ok(getTransactionDetailUseCase.execute(transactionId, merchantId));
+    @PostMapping("/refund")
+    public ResponseEntity<Void> requestRefund(
+            @Valid @RequestBody RefundRequest request
+    ) {
+        UUID merchantId = securityContextService.getCurrentMerchantId();
+        refundUseCase.execute(merchantId, request);
+        return ResponseEntity.ok().build();
     }
 }

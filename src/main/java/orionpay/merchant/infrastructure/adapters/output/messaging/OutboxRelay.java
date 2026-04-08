@@ -24,7 +24,7 @@ public class OutboxRelay {
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
 
-    @Scheduled(fixedDelay = 5000) // Executa a cada 5 segundos
+    @Scheduled(fixedDelay = 500) // Executa a cada 5 segundos
     @Transactional
     public void processOutbox() {
         List<OutboxEventEntity> pendingEvents = outboxRepository.findByStatus(OutboxEventEntity.OutboxStatus.PENDING);

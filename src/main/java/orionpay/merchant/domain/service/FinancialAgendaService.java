@@ -26,12 +26,19 @@ public class FinancialAgendaService {
 
     private final JpaSettlementEntryRepository repository;
 
-    public FinancialAgendaResponse getAgenda(UUID merchantId, int year, int month, int page, int size, String statusStr) {
+    public FinancialAgendaResponse getAgenda(
+            UUID merchantId,
+            int year,
+            int month,
+            int page,
+            int size,
+            String statusStr
+    ) {
         log.info("Buscando agenda financeira para merchant: {} | Mês: {}/{}", merchantId, month, year);
 
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
-        
+
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = endDate.atTime(LocalTime.MAX);
 
@@ -60,7 +67,7 @@ public class FinancialAgendaService {
 
     public SettlementDetailResponse getSettlementDetail(UUID id) {
         log.info("Buscando detalhes da liquidação: {}", id);
-        
+
         AgendaItemProjection projection = repository.findDetailById(id)
                 .orElseThrow(() -> new DomainException("Detalhamento da liquidação não encontrado.", "SETTLEMENT_NOT_FOUND"));
 
@@ -95,7 +102,8 @@ public class FinancialAgendaService {
 
     private String mapTitularidade(AgendaItemProjection projection) {
         if (Boolean.TRUE.equals(projection.getBlocked())) return "VINCULADO A GARANTIA";
-        if (Boolean.TRUE.equals(projection.getAnticipated()) || "ANTICIPATED".equalsIgnoreCase(projection.getStatus())) return "ANTECIPADO";
+        if (Boolean.TRUE.equals(projection.getAnticipated()) || "ANTICIPATED".equalsIgnoreCase(projection.getStatus()))
+            return "ANTECIPADO";
         return "DISPONÍVEL";
     }
 
