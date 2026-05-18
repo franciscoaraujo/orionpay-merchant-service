@@ -7,12 +7,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import orionpay.merchant.application.ports.output.*;
 import orionpay.merchant.domain.excepion.DomainException;
-import orionpay.merchant.domain.model.IdempotencyResult;
-import orionpay.merchant.domain.model.LedgerAccount;
-import orionpay.merchant.domain.model.Merchant;
-import orionpay.merchant.domain.model.Transaction;
-import orionpay.merchant.domain.model.TransactionSource;
-import orionpay.merchant.domain.model.enums.EntryType;
+import orionpay.merchant.domain.model.*;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.TransactionRequest;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.TransactionResponse;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.MerchantRepository;
@@ -33,16 +28,19 @@ public class AuthorizeTransactionUseCase {
     private final PaymentGatewayPort paymentGateway;
     private final PricingRepository pricingRepository;
     private final IdempotencyService idempotencyService;
+    private final EventPublisherPort eventPublisher;
+    private final LiveTransactionBroadcastPort liveTransactionBroadcastPort;
+    private final TelemetryPublisherPort telemetryPublisher;
 
     @Transactional
-    // Invalida o cache do Dashboard para este lojista, pois o saldo e métricas mudaram
-    @CacheEvict(value = "dashboard_summary", key = "#request.merchantId")
+    @CacheEvict(value = "dashboard_summary", allEntries = true)
     public TransactionResponse execute(TransactionRequest request, String idempotencyKey) {
-        // 1. Checagem de Idempotência
+
         IdempotencyResult cachedResult = idempotencyService.checkAndLock(idempotencyKey);
+
         if (cachedResult != null) {
             if ("SUCCESS".equals(cachedResult.getStatus())) {
-                log.info("Retornando resposta idempotente para chave: {}", idempotencyKey);
+                log.info("Requisição de autorização idempotente (já processada). Chave: {}", idempotencyKey);
                 return (TransactionResponse) cachedResult.getResponseBody();
             } else {
                 throw new DomainException(cachedResult.getErrorMessage(), "IDEMPOTENCY_ERROR");
@@ -52,22 +50,14 @@ public class AuthorizeTransactionUseCase {
         try {
             log.info("Iniciando autorização de transação para o merchantId: {} | Valor: {}", request.merchantId(), request.amount());
 
-            // 2. Buscar e Validar Lojista
-            Merchant merchant = merchantRepository.findById(request.merchantId())
-                    .orElseThrow(() -> {
-                        log.warn("Merchant não encontrado: {}", request.merchantId());
-                        return new DomainException("Lojista não encontrado.", "MERCHANT_NOT_FOUND");
-                    });
+            Merchant merchant = merchantRepository
+                    .findById(request.merchantId())
+                    .orElseThrow(() -> new DomainException("Lojista não encontrado.", "MERCHANT_NOT_FOUND"));
 
-            // --- NOVA VALIDAÇÃO: Buscar Precificação antes de autorizar ---
-            log.debug("Buscando precificação para merchantId: {} e produto: {}", merchant.getId(), request.productType());
-            var pricing = pricingRepository.findCurrentPricing(merchant.getId(), request.productType())
-                    .orElseThrow(() -> {
-                        log.error("Precificação não encontrada para merchantId: {} e produto: {}", merchant.getId(), request.productType());
-                        return new DomainException("Lojista sem configuração de taxas para " + request.productType());
-                    });
+            var pricing = pricingRepository
+                    .findCurrentPricing(merchant.getId(), request.productType())
+                    .orElseThrow(() -> new DomainException("Lojista sem configuração de taxas para " + request.productType()));
 
-            // 2. Criar Transação
             Transaction transaction = new Transaction(
                     UUID.randomUUID(),
                     merchant,
@@ -90,8 +80,10 @@ public class AuthorizeTransactionUseCase {
                 log.warn("Transação negada pelo Gateway. Motivo: {}", authResult.getErrorMessage());
                 transaction.decline(authResult.getErrorMessage());
                 transactionRepository.save(transaction);
-                idempotencyService.saveError(idempotencyKey, "Transação negada: " + authResult.getErrorMessage());
-                throw new DomainException("Transação negada: " + authResult.getErrorMessage());
+
+                String errorMsg = "Transação negada: " + authResult.getErrorMessage();
+                idempotencyService.saveError(idempotencyKey, errorMsg);
+                throw new DomainException(errorMsg);
             }
 
             transaction.calculateNetValue(pricing.getMdrPercentage());
@@ -137,8 +129,6 @@ public class AuthorizeTransactionUseCase {
             return response;
 
         } catch (Exception e) {
-            // Em caso de erro inesperado, libera o lock para permitir retry
-            idempotencyService.releaseLock(idempotencyKey);
             log.error("Erro inesperado ao autorizar transação para merchantId: {}", request.merchantId(), e);
             if (!(e instanceof DomainException)) {
                 idempotencyService.releaseLock(idempotencyKey);

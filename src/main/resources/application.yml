@@ -30,15 +30,6 @@ spring:
       port: ${SPRING_DATA_REDIS_PORT:6379}
 
   # --- CONFIGURAÇÃO DE E-MAIL ---
-    name: merchant-service
-  
-  # Configuração explícita do Redis para evitar ambiguidade de localhost
-  data:
-    redis:
-      host: 127.0.0.1
-      port: 6379
-      # password: se_tiver_senha_coloque_aqui
-
   mail:
     host: smtp.gmail.com
     port: 587
@@ -93,28 +84,3 @@ monitoring:
   user:
     name: apm-agent
     password: ${MONITORING_PASSWORD:ChangeThisPasswordInProd}
-  jpa:
-    open-in-view: false
-    # database-platform: org.hibernate.dialect.PostgreSQLDialect  <-- REMOVIDO
-    hibernate:
-      # Use 'none' ou 'validate' em produção. 'update' apenas para desenvolvimento.
-      ddl-auto: update
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: false
-        # Define o schema padrão para evitar ter que prefixar todas as tabelas
-        default_schema: core
-        # Otimização para alto volume de transações
-        jdbc:
-          batch_size: 20
-          order_inserts: false
-          order_updates: false
-
-  # Configuração de Logs específica para o Spring
-  output:
-    ansi:
-      enabled: always
-
-logging:
-  config: classpath:logback-spring.xml # Link com o arquivo que criamos antes
