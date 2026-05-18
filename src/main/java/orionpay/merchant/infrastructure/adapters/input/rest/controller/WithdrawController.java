@@ -20,7 +20,8 @@ import java.util.UUID;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/merchants/withdrawals") // Restaurado o padrão original
+@RequestMapping("/api/v1/withdrawals")
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 @RequiredArgsConstructor
 public class WithdrawController {
 
@@ -57,5 +58,12 @@ public class WithdrawController {
         Page<PayoutHistoryResponse> response = getPayoutHistoryUseCase.execute(merchantId, pageable);
         
         return ResponseEntity.ok(response);
+    @PostMapping
+    public ResponseEntity<Void> requestWithdraw(
+            @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody WithdrawRequest request
+    ) {
+        withdrawMoneyUseCase.execute(request, idempotencyKey);
+        return ResponseEntity.accepted().build();
     }
 }

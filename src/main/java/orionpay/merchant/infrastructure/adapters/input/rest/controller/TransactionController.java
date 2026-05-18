@@ -24,6 +24,7 @@ import java.util.UUID;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/transactions")
+@CrossOrigin(origins = "*", allowedHeaders = "*")
 @RequiredArgsConstructor
 public class TransactionController {
 
@@ -34,12 +35,13 @@ public class TransactionController {
 
     @PostMapping("/authorize")
     public ResponseEntity<TransactionResponse> authorize(
-            @Valid @RequestBody TransactionRequest request,
-            @RequestHeader("X-Idempotency-Key") String idempotencyKey
+            @RequestHeader(value = "X-Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody TransactionRequest request
     ) {
-        // Log para confirmar o recebimento dos dados do cartão.
-        // O PAN é mascarado aqui por segurança, mas o log confirma que o campo foi recebido.
-        log.info(">>> Recebida requisição de autorização para o cartão final: {}", request.cardLastFour());
+        // Passa a chave de idempotência para o Use Case
+        TransactionResponse response = authorizeUseCase.execute(request, idempotencyKey);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
 
         TransactionResponse response = authorizeUseCase.execute(request, idempotencyKey);
         return ResponseEntity.ok(response);
