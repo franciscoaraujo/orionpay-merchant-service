@@ -9,5 +9,13 @@ import java.util.UUID;
 
 @Repository
 public interface JpaOutboxRepository extends JpaRepository<OutboxEventEntity, UUID> {
+    
     List<OutboxEventEntity> findByStatus(OutboxEventEntity.OutboxStatus status);
+
+    /**
+     * Conta o número de eventos no outbox com um status específico.
+     * @param status O status a ser contado (ex: PENDING).
+     * @return O número de eventos.
+     */
+    Integer countByStatus(OutboxEventEntity.OutboxStatus status);
 }

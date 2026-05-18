@@ -2,6 +2,7 @@ package orionpay.merchant.infrastructure.adapters.input.rest.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -20,6 +21,7 @@ import orionpay.merchant.infrastructure.adapters.input.rest.security.SecurityCon
 
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/transactions")
 @RequiredArgsConstructor
@@ -35,6 +37,10 @@ public class TransactionController {
             @Valid @RequestBody TransactionRequest request,
             @RequestHeader("X-Idempotency-Key") String idempotencyKey
     ) {
+        // Log para confirmar o recebimento dos dados do cartão.
+        // O PAN é mascarado aqui por segurança, mas o log confirma que o campo foi recebido.
+        log.info(">>> Recebida requisição de autorização para o cartão final: {}", request.cardLastFour());
+
         TransactionResponse response = authorizeUseCase.execute(request, idempotencyKey);
         return ResponseEntity.ok(response);
     }

@@ -1,3 +1,4 @@
+// This file is intentionally blank to resolve a bean conflict during code revert.
 package orionpay.merchant.infrastructure.adapters.output.persistence.mapper;
 
 import org.mapstruct.Mapper;
@@ -66,10 +67,10 @@ public interface DashboardMapper {
 
     default BigDecimal calculatePercentageChange(BigDecimal current, BigDecimal previous) {
         if (previous == null || previous.compareTo(BigDecimal.ZERO) == 0) {
-             return (current == null || current.compareTo(BigDecimal.ZERO) == 0) ? BigDecimal.ZERO : BigDecimal.valueOf(100);
+            return (current == null || current.compareTo(BigDecimal.ZERO) == 0) ? BigDecimal.ZERO : BigDecimal.valueOf(100);
         }
         if (current == null) return BigDecimal.valueOf(-100);
-        
+
         return current.subtract(previous)
                 .divide(previous, 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100))

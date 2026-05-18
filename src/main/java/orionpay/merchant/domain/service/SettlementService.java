@@ -8,14 +8,15 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.dao.DataIntegrityViolationException;
+import orionpay.merchant.application.ports.output.TelemetryPublisherPort;
+import orionpay.merchant.config.RabbitMQConfig;
 import orionpay.merchant.domain.excepion.BusinessResilienceException;
-import orionpay.merchant.domain.excepion.DomainException;
 import orionpay.merchant.domain.model.LedgerAccount;
 import orionpay.merchant.domain.model.TransactionEvent;
 import orionpay.merchant.domain.model.enums.EntryType;
@@ -25,13 +26,13 @@ import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaSettlementEntryRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.LedgerRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.PricingRepository;
-import orionpay.merchant.config.RabbitMQConfig; // CORRIGIDO: Novo pacote
 
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,6 +48,7 @@ public class SettlementService {
     private final RedisTemplate<String, String> redisTemplate;
     private final SettlementCalculator settlementCalculator = new SettlementCalculator();
     private final ObjectProvider<SettlementService> selfProvider;
+    private final TelemetryPublisherPort telemetryPublisher; // 1. INJEÇÃO DA TELEMETRIA
 
     private static final String IDEMPOTENCY_PREFIX = "settlement:lock:";
     private static final Duration LOCK_TTL = Duration.ofHours(48);
@@ -54,36 +56,54 @@ public class SettlementService {
     @RabbitListener(queues = RabbitMQConfig.SETTLEMENT_PROCESS_QUEUE, ackMode = "MANUAL")
     @Transactional(noRollbackFor = BusinessResilienceException.class)
     @Bulkhead(name = "settlementEngine", type = Bulkhead.Type.SEMAPHORE)
-    public void processTransactionSettlement(TransactionEvent event, Channel channel, @Header(AmqpHeaders.DELIVERY_TAG) long tag) throws IOException {
+    public void processTransactionSettlement(
+            TransactionEvent event,
+            Channel channel, @Header(AmqpHeaders.DELIVERY_TAG)
+            long tag
+    ) throws IOException {
+
         String idempotencyKey = IDEMPOTENCY_PREFIX + event.transactionId();
 
         try {
             log.info("Iniciando orquestração de liquidação | Transação: {}", event.transactionId());
 
-            Boolean isNewRequest = redisTemplate.opsForValue().setIfAbsent(idempotencyKey, "PROCESSING", LOCK_TTL);
+            Boolean isNewRequest = redisTemplate
+                    .opsForValue()
+                    .setIfAbsent(idempotencyKey, "PROCESSING", LOCK_TTL);
+
             if (Boolean.FALSE.equals(isNewRequest)) {
                 log.info("Idempotência acionada (Redis): Transação {} já processada ou em andamento. Enviando ACK.", event.transactionId());
                 channel.basicAck(tag, false);
                 return;
             }
 
-            var pricing = pricingRepository.findCurrentPricing(event.merchantId(), event.productType())
+            var pricing = pricingRepository
+                    .findCurrentPricing(event.merchantId(), event.productType())
                     .orElseThrow(() -> new BusinessResilienceException("Precificação não encontrada p/ " + event.productType(), "CONFIG_PENDING"));
 
-            List<SettlementCalculator.CalculatedInstallment> calculatedInstallments = 
-                settlementCalculator.calculate(event, pricing.getMdrPercentage());
+            List<SettlementCalculator.CalculatedInstallment> calculatedInstallments =
+                    settlementCalculator.calculate(event, pricing.getMdrPercentage());
 
             selfProvider.getIfAvailable().ensureLedgerAccountExists(event.merchantId());
 
             for (SettlementCalculator.CalculatedInstallment installment : calculatedInstallments) {
-                selfProvider.getIfAvailable().processSingleInstallment(event, installment, pricing.getMdrPercentage(), calculatedInstallments.size());
+                selfProvider.getIfAvailable()
+                        .processSingleInstallment(
+                                event,
+                                installment,
+                                pricing.getMdrPercentage(),
+                                calculatedInstallments.size()
+                        );
             }
 
             dailySummaryRepository.upsertDailyMetrics(
                     event.merchantId(),
                     event.occurredAt().toLocalDate(),
                     event.amount(),
-                    calculatedInstallments.stream().map(SettlementCalculator.CalculatedInstallment::getNetAmount).reduce(BigDecimal.ZERO, BigDecimal::add),
+                    calculatedInstallments
+                            .stream()
+                            .map(SettlementCalculator.CalculatedInstallment::getNetAmount)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add),
                     1,
                     1
             );
@@ -91,6 +111,19 @@ public class SettlementService {
             redisTemplate.opsForValue().set(idempotencyKey, "COMPLETED", LOCK_TTL);
             channel.basicAck(tag, false);
             log.info("Orquestração de liquidação finalizada com sucesso para transação: {}", event.transactionId());
+
+            // --- INÍCIO DA INTEGRAÇÃO DA TELEMETRIA ---
+            // 2. Dispara o evento de telemetria (fire-and-forget)
+            // 3. A resiliência é garantida pela implementação da porta.
+            telemetryPublisher.publishTelemetry(
+                    "SETTLEMENT-LISTENER",
+                    "INSTALLMENTS_SCHEDULED",
+                    Map.of(
+                            "transactionId", event.transactionId(),
+                            "merchantId", event.merchantId()
+                    )
+            );
+            // --- FIM DA INTEGRAÇÃO DA TELEMETRIA ---
 
         } catch (BusinessResilienceException e) {
             log.error("Configuração Pendente: {}. O registro será mantido como PENDING para intervenção manual.", e.getMessage());
@@ -127,8 +160,8 @@ public class SettlementService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void processSingleInstallment(
-            TransactionEvent event, 
-            SettlementCalculator.CalculatedInstallment installment, 
+            TransactionEvent event,
+            SettlementCalculator.CalculatedInstallment installment,
             BigDecimal mdrPercentage,
             int totalInstallments
     ) {
@@ -160,12 +193,12 @@ public class SettlementService {
                 .status(SettlementStatus.PENDING)
                 .processedAt(LocalDateTime.now())
                 .build();
-        
+
         try {
             settlementRepository.saveAndFlush(settlementEntry);
             selfProvider.getIfAvailable().callAccountingWithResilience(event, settlementEntry, installment);
         } catch (DataIntegrityViolationException e) {
-            log.info("Idempotência acionada (DB): Parcela {} da transação {} já processada. Ignorando duplicidade.", 
+            log.info("Idempotência acionada (DB): Parcela {} da transação {} já processada. Ignorando duplicidade.",
                     installment.getInstallmentNumber(), event.transactionId());
         }
     }
@@ -174,15 +207,15 @@ public class SettlementService {
     @Bulkhead(name = "ledgerBulkhead", fallbackMethod = "fallbackLedger")
     public void callAccountingWithResilience(TransactionEvent event, SettlementEntryEntity entry, SettlementCalculator.CalculatedInstallment installment) {
         processAccounting(event, installment.getNetAmount(), installment.getExpectedSettlementDate(), installment.getInstallmentNumber());
-        
+
         entry.setStatus(SettlementStatus.SCHEDULED);
         settlementRepository.save(entry);
         log.info("Parcela {} promovida para SCHEDULED via Ledger.", installment.getInstallmentNumber());
     }
 
     public void fallbackLedger(TransactionEvent event, SettlementEntryEntity entry, SettlementCalculator.CalculatedInstallment installment, Throwable t) {
-        log.warn("Circuito Aberto ou Falha Temporária para Ledger. Parcela {} mantida PENDING para cura posterior. Motivo: {}", 
-                 installment.getInstallmentNumber(), t.getMessage());
+        log.warn("Circuito Aberto ou Falha Temporária para Ledger. Parcela {} mantida PENDING para cura posterior. Motivo: {}",
+                installment.getInstallmentNumber(), t.getMessage());
     }
 
     private void processAccounting(TransactionEvent event, BigDecimal netAmount, LocalDateTime availableAt, int installmentNumber) {

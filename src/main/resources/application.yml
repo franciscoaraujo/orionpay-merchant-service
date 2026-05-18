@@ -1,37 +1,40 @@
 spring:
   application:
-    port: 8085
     name: orionpay-merchant-service
 
-
+  # --- BANCO DE DADOS ---
   datasource:
-    url: jdbc:postgresql://localhost:5432/orion_payments
-    username: postgres
-    password: admin
+    url: jdbc:postgresql://${SPRING_DATASOURCE_HOST:localhost}:5432/orionpay_db
+    username: ${SPRING_DATASOURCE_USERNAME:orion_admin}
+    password: ${SPRING_DATASOURCE_PASSWORD:orion_password}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # --- MENSAGERIA (Corrigido sem duplicatas) ---
   rabbitmq:
-    host: localhost
+    host: ${SPRING_RABBITMQ_HOST:localhost}
     port: 5672
-    username: guest
-    password: guest
+    username: ${SPRING_RABBITMQ_USER:orion_admin}
+    password: ${SPRING_RABBITMQ_PASS:orion_password}
+
+  # --- CACHE ---
   data:
     redis:
-      host: localhost
-      port: 6379
-  # --- CONFIGURAÇÃO DE E-MAIL (SMTP) ---
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+  # --- CONFIGURAÇÃO DE E-MAIL ---
   mail:
     host: smtp.gmail.com
     port: 587
     username: bitwisebytes@gmail.com
-    # ATENÇÃO: Use uma "Senha de App" gerada no Google (16 caracteres), não sua senha normal.
-    # Tutorial: https://support.google.com/accounts/answer/185833
-    password:  # Substitua isso pela Senha de App
+    password: ${MAIL_PASSWORD} # Passe via variável de ambiente ou injete aqui
     properties:
       mail:
         smtp:
@@ -39,37 +42,34 @@ spring:
           starttls:
             enable: true
             required: true
-        debug: true # Ativa logs detalhados do JavaMail para debug
+        debug: false
 
+# --- SERVIDOR ---
 server:
-  port: 8080
+  port: 8085
 
 # --- SEGURANÇA E JWT ---
 jwt:
-  secret: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
+  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
   access-token-expiration-minutes: 60
   refresh-token-expiration-days: 7
 
-# --- CONFIGURAÇÃO DE RESILIÊNCIA (SRE) ---
+# --- RESILIÊNCIA ---
 resilience4j:
   circuitbreaker:
     instances:
       ledgerCircuitBreaker:
         failureRateThreshold: 50
         waitDurationInOpenState: 30s
-        slidingWindowType: COUNT_BASED
         slidingWindowSize: 10
-        permittedNumberOfCallsInHalfOpenState: 3
         registerHealthIndicator: true
-        eventConsumerBufferSize: 10
   bulkhead:
     instances:
       ledgerBulkhead:
         maxConcurrentCalls: 5
-        maxWaitDuration: 0ms
         registerHealthIndicator: true
 
-# Exposição de métricas para Prometheus/Grafana
+# --- MONITORAMENTO ---
 management:
   endpoints:
     web:
@@ -78,3 +78,9 @@ management:
   endpoint:
     health:
       show-details: always
+
+# --- USUÁRIO DE MONITORAMENTO (APM) ---
+monitoring:
+  user:
+    name: apm-agent
+    password: ${MONITORING_PASSWORD:ChangeThisPasswordInProd}
