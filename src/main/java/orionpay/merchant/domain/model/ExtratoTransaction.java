@@ -1,22 +1,26 @@
 package orionpay.merchant.domain.model;
 
 import lombok.Builder;
-import lombok.Value;
-
+import lombok.Data;
+import orionpay.merchant.domain.model.enums.ProductType;
+import orionpay.merchant.domain.model.enums.TransactionStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Value
+@Data
 @Builder
 public class ExtratoTransaction {
-    UUID id;
-    String nsu;
-    BigDecimal amount;
-    LocalDateTime createdAt;
-    String brand;        // Visa, Mastercard, etc.
-    String lastFour;     // **** 1234
-    String status;       // APPROVED, DECLINED, etc.
-    String externalId;   // tx_123456
+    private UUID id;
+    private String nsu;
+    private BigDecimal amount;
+    private BigDecimal netAmount;
+    private ProductType productType;
+    private TransactionStatus status;
+    private String authCode;
+    private String cardBrand;
+    private String cardLastFour;
+    private LocalDateTime createdAt;
+    private String errorMessage;
 }

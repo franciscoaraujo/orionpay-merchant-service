@@ -10,94 +10,59 @@ Construído com **Java 21**, **Spring Boot 3.x** e seguindo os princípios de **
 
 O projeto segue uma arquitetura limpa, separando o núcleo de negócio das tecnologias externas.
 
-### Estrutura de Pacotes
-```
-orionpay.merchant
-├── application      # Camada de Aplicação (Ports - Interfaces de Entrada/Saída)
-├── domain           # Núcleo de Negócio (Entidades, Value Objects, Use Cases)
-├── infrastructure   # Implementações Técnicas (Adapters, Persistence, Controllers, Config)
-└── config           # Configurações do Spring Framework
-```
-
-### Tecnologias Principais
-*   **Java 21** (LTS)
-*   **Spring Boot 3.x** (Web, Data JPA, Validation, AMQP, Cache)
-*   **RabbitMQ** (Mensageria e Motor de Eventos)
-*   **PostgreSQL** (Banco de Dados Relacional)
-*   **Redis** (Cache Distribuído e Idempotência)
-*   **Resilience4j** (Circuit Breaker, Retry e Bulkhead)
-*   **MapStruct** (Mapeamento de Objetos)
-*   **Lombok** (Redução de Boilerplate)
-
 ---
 
 ## ✨ Funcionalidades e Otimizações de Elite
 
-### 1. Motor de Liquidação Assíncrono (Settlement Engine)
-*   **Arquitetura Baseada em Eventos**: Transações autorizadas disparam eventos via **RabbitMQ** para processamento financeiro desacoplado.
-*   **Garantia de Idempotência**: Uso de travas distribuídas no **Redis** para evitar duplicidade de liquidação.
-*   **Resiliência Financeira**: Implementação de **Dead Letter Queues (DLQ)** para garantir que nenhuma falha de processamento resulte em perda de dados contábeis.
+### 1. Pattern Transactional Outbox (Consistência Eventual Garantida) 🛡️
+Para garantir que nenhuma venda aprovada deixe de ser liquidada, implementamos o padrão **Transactional Outbox**.
+*   **Funcionamento**: A venda e o evento de liquidação são salvos na **mesma transação** do banco de dados (Tabela `core.outbox`). Um componente **Outbox Relay** assíncrono publica no RabbitMQ com garantia **At-Least-Once**.
 
-### 2. Resiliência e Tolerância a Falhas
-*   **Circuit Breaker & Retry**: Proteção contra falhas no Gateway de Adquirentes e serviços externos usando **Resilience4j**.
-*   **Bulkhead Isolation**: Limitação de execução concorrente no motor de liquidação para proteger a saúde do sistema em picos de carga.
-*   **Fallback Logic**: Respostas tratadas ("Sistema Indisponível") em vez de erros 500 durante instabilidades externas.
+### 2. Idempotência Lógica e Mecanismo de Cura (Check-and-Skip) 🔄
+Implementamos uma estratégia de idempotência multicamada para máxima integridade financeira.
+*   **Check-and-Skip**: O motor de liquidação consulta o estado da parcela antes de processar. Se já estiver em estado final (`SCHEDULED`, `PAID`, etc.), a operação é ignorada, silenciando logs de erro de concorrência.
+*   **Mecanismo de Cura**: Caso uma parcela exista no status `PENDING` (devido a falhas anteriores no Ledger), o motor tenta completar o processamento contábil para o registro existente, em vez de criar um novo.
 
-### 3. Inteligência Financeira e Performance (Sprint 1 - Read Models)
-*   **Dashboard de Alta Performance**: Implementação de **Read Models** (Tabelas de Resumo Diário) com complexidade de leitura **O(1)**.
-*   **Upsert Atômico**: Uso de `ON CONFLICT DO UPDATE` no PostgreSQL para consolidação de métricas em tempo real (TPV, Net Revenue, Ticket Médio).
-*   **Comparação de Período Equivalente**: Inteligência de BI que compara "Hoje vs Ontem" no mesmo intervalo de horas para métricas precisas.
+### 3. Circuit Breaker e Bulkhead (Resiliência de Integração) 🔌
+Proteção do fluxo crítico de liquidação contra falhas em cascata utilizando **Resilience4j**.
+*   **Isolamento (Bulkhead)**: Limita o número de threads simultâneas em chamadas ao Ledger, evitando que lentidões consumam todos os recursos da JVM.
+*   **Disjuntor (Circuit Breaker)**: Interrompe chamadas ao Ledger se a taxa de erro ultrapassar 50%.
+*   **Fallback Inteligente**: Durante instabilidades, o sistema mantém as parcelas em estado `PENDING` no banco, permitindo a recuperação automática posterior sem descartar a transação.
 
-### 4. Segurança e Auditoria
-*   **Idempotência em API**: Header `X-Idempotency-Key` obrigatório em fluxos críticos (Saque e Autorização).
-*   **JWT com JTI**: Tokens de acesso e refresh protegidos com Identificador Único (JTI) para prevenir ataques de replay.
-*   **Ledger Imutável (Livro Razão)**: Registro rigoroso de todas as movimentações financeiras seguindo o padrão de partidas dobradas.
+### 4. Gestão de Exceções e Clean Logs 📋
+Refatoração do tratamento de erros para facilitar a operação e o suporte (SRE).
+*   **BusinessResilienceException**: Exceção customizada para sinalizar falta de configuração (MDR ou Conta). Bloqueia rollbacks totais e permite que o rascunho (`PENDING`) seja salvo para auditoria.
+*   **Logs Acionáveis**: Substituição de StackTraces genéricos por mensagens claras de INFO/WARN em casos de idempotência e falhas de rede.
+
+### 5. Motor de Liquidação e Orquestração de Parcelas 💳
+*   **Explosão de Parcelas**: Transações de Crédito Parcelado são decompostas em múltiplos recebíveis na tabela `ops.settlement_entry`.
+*   **D+30 Progressivo**: Cálculo automático de datas de vencimento mensais sincronizadas para o lojista.
+
+### 6. Antecipação de Recebíveis com Precisão Bancária 💰
+*   **Simulação e Execução**: Cálculo de custo de antecipação pro-rata baseado na taxa real do lojista e dias restantes para liquidação (D+N).
+*   **Liquidez Imediata**: Crédito instantâneo no saldo disponível via Ledger ao realizar a operação.
+
+---
+
+## 🛠️ Tecnologias Principais
+*   **Java 21** & **Spring Boot 3.x**
+*   **RabbitMQ**: Mensageria e eventos.
+*   **PostgreSQL**: Banco de dados relacional.
+*   **Redis**: Cache e locks de idempotência.
+*   **Resilience4j**: Circuit Breaker, Bulkhead e Retry.
+*   **Micrometer/Prometheus**: Observabilidade e métricas de resiliência.
 
 ---
 
 ## 🚀 Como Rodar
 
 ### Pré-requisitos
-*   Java 21 JDK
-*   Maven
-*   PostgreSQL (Local ou Docker)
-*   Redis (Local ou Docker)
-*   RabbitMQ (Local ou Docker)
+*   Java 21 JDK, Maven e Docker.
 
-### 1. Configuração da Infraestrutura (Docker)
-```bash
-# Subir Redis e RabbitMQ rapidamente
-docker run -d --name redis -p 6379:6379 redis
-docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
-```
-
-### 2. Configuração do Banco de Dados
-O `application.yml` está configurado para:
-*   URL: `jdbc:postgresql://localhost:5432/orion_payments`
-*   User: `postgres`
-*   Pass: `admin`
-
-*Dica: Certifique-se de que o schema `ops` e `accounting` existam no seu banco.*
-
-### 3. Executando a Aplicação
+### Executando a Aplicação
 ```bash
 mvn spring-boot:run
 ```
-
----
-
-## 📚 Endpoints Principais
-
-*   **Autorizar Transação**: `POST /api/v1/transactions/authorize` (Requer `X-Idempotency-Key`)
-*   **Dashboard Summary**: `GET /api/v1/dashboard/{merchantId}/summary`
-*   **Solicitar Saque**: `POST /api/v1/withdrawals` (Requer `X-Idempotency-Key`)
-*   **Extrato de Transações**: `GET /api/v1/transactions/{merchantId}/extrato`
-
----
-
-## 🛡️ Decisões Técnicas de Escala
-*   **Separação de Preocupações**: A lógica de autorização (rápida) é separada da lógica de liquidação (lenta/complexa) via mensageria.
-*   **Escalabilidade de Leitura**: O Dashboard lê resumos pré-calculados, permitindo que o sistema suporte milhões de usuários simultâneos sem degradar a performance do banco.
 
 ---
 

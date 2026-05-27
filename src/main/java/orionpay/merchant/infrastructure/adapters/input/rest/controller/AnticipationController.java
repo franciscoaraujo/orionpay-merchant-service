@@ -4,8 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import orionpay.merchant.domain.service.AnticipationService;
+import orionpay.merchant.domain.service.PrepaymentUseCase;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.AnticipationRequest;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.AnticipationResponse;
+import orionpay.merchant.infrastructure.adapters.input.rest.security.SecurityContextService;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -17,9 +19,17 @@ import java.util.UUID;
 public class AnticipationController {
 
     private final AnticipationService service;
+    private final PrepaymentUseCase prepaymentUseCase;
+    private final SecurityContextService securityContextService;
 
+    /**
+     * Endpoint p/ listar recebíveis disponíveis para antecipação.
+     * @param id Extraído da URL (prioridade p/ testes) ou do Contexto de Segurança.
+     */
     @GetMapping("/{id}/anticipation/available")
     public ResponseEntity<AnticipationResponse> getAvailableForAnticipation(@PathVariable UUID id) {
+        // Para testes manuais, usamos o ID da URL. 
+        // Em produção, o ideal é validar se o ID da URL == ID do Token.
         AnticipationResponse response = service.getAvailableSettlements(id);
         return ResponseEntity.ok(response);
     }
@@ -34,7 +44,7 @@ public class AnticipationController {
     public ResponseEntity<Void> executeAnticipation(
             @PathVariable UUID id,
             @RequestBody AnticipationRequest request) {
-        service.executeAnticipation(id, request);
+        prepaymentUseCase.execute(id, request);
         return ResponseEntity.ok().build();
     }
 }

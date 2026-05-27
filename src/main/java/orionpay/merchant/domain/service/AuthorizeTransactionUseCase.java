@@ -3,22 +3,21 @@ package orionpay.merchant.domain.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
-import orionpay.merchant.application.ports.output.GatewayAuthorizationResult;
-import orionpay.merchant.application.ports.output.PaymentGatewayPort;
+import orionpay.merchant.application.ports.output.AcquiringSwitchPort;
+import orionpay.merchant.application.ports.output.EventPublisherPort;
 import orionpay.merchant.domain.excepion.DomainException;
 import orionpay.merchant.domain.model.*;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.TransactionRequest;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.TransactionResponse;
-import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.LedgerRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.MerchantRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.PricingRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.TransactionRepository;
-import orionpay.merchant.infrastructure.config.RabbitMQConfig;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 @Log4j2
@@ -28,15 +27,13 @@ public class AuthorizeTransactionUseCase {
 
     private final MerchantRepository merchantRepository;
     private final TransactionRepository transactionRepository;
-    private final LedgerRepository ledgerRepository;
-    private final PaymentGatewayPort paymentGateway;
+    private final AcquiringSwitchPort acquiringSwitch;
     private final PricingRepository pricingRepository;
     private final IdempotencyService idempotencyService;
-    private final RabbitTemplate rabbitTemplate;
+    private final EventPublisherPort eventPublisher;
 
     @Transactional
-    // CORREÇÃO: Limpa todos os períodos do cache do dashboard deste lojista (hoje, ontem, mes, etc.)
-    @CacheEvict(value = "dashboard_summary", allEntries = true) 
+    @CacheEvict(value = "dashboard_summary", allEntries = true)
     public TransactionResponse execute(TransactionRequest request, String idempotencyKey) {
         IdempotencyResult cachedResult = idempotencyService.checkAndLock(idempotencyKey);
         if (cachedResult != null) {
@@ -67,21 +64,33 @@ public class AuthorizeTransactionUseCase {
 
             transaction.setCardInfo(request.cardBrand(), request.cardBin(), request.cardLastFour(), request.cardHolderName());
 
-            log.info("Enviando transação para o Gateway. TransactionId: {}", transaction.getId());
-            GatewayAuthorizationResult authResult = paymentGateway.authorize(transaction, request);
+            log.info("Enviando transação para o Switch gRPC. TransactionId: {}", transaction.getId());
+            
+            Authorization.Request authRequest = toAuthorizationRequest(transaction, request);
+            Optional<Authorization.Result> authResultOpt = acquiringSwitch.authorizeTransaction(authRequest);
 
-            if (!authResult.isApproved()) {
-                log.warn("Transação negada pelo Gateway. Motivo: {}", authResult.getErrorMessage());
-                transaction.decline(authResult.getErrorMessage());
+            if (authResultOpt.isEmpty()) {
+                String errorMsg = "Falha de comunicação com o sistema autorizador.";
+                transaction.decline(errorMsg);
                 transactionRepository.save(transaction);
-                
-                String errorMsg = "Transação negada: " + authResult.getErrorMessage();
+                idempotencyService.saveError(idempotencyKey, errorMsg);
+                throw new DomainException(errorMsg, "COMMUNICATION_FAILURE");
+            }
+
+            Authorization.Result authResult = authResultOpt.get();
+            boolean isApproved = "00".equals(authResult.getResponseCode());
+
+            if (!isApproved) {
+                String errorMsg = "Transação negada pelo autorizador. Código: " + authResult.getResponseCode();
+                log.warn(errorMsg);
+                transaction.decline(errorMsg);
+                transactionRepository.save(transaction);
                 idempotencyService.saveError(idempotencyKey, errorMsg);
                 throw new DomainException(errorMsg);
             }
 
             transaction.calculateNetValue(pricing.getMdrPercentage());
-            transaction.processApproval(authResult.getNsu(), authResult.getAuthCode());
+            transaction.processApproval(authResult.getNsuAcquirer(), authResult.getNsuBrand());
 
             transactionRepository.save(transaction);
             log.info("Transação autorizada e persistida com sucesso. ID: {} | NSU: {}", transaction.getId(), transaction.getNsu());
@@ -95,14 +104,10 @@ public class AuthorizeTransactionUseCase {
                     .installments(request.installments())
                     .status(transaction.getStatus())
                     .occurredAt(LocalDateTime.now())
-                    .description("Transação autorizada para liquidação")
+                    .description("Transação autorizada via Outbox")
                     .build();
 
-            rabbitTemplate.convertAndSend(
-                    RabbitMQConfig.TRANSACTION_AUTHORIZED_EXCHANGE,
-                    RabbitMQConfig.SETTLEMENT_ROUTING_KEY,
-                    event
-            );
+            eventPublisher.publish(event);
 
             TransactionResponse response = TransactionResponse.fromDomain(transaction, "Transação aprovada.");
             idempotencyService.saveSuccess(idempotencyKey, response);
@@ -115,5 +120,23 @@ public class AuthorizeTransactionUseCase {
             }
             throw e;
         }
+    }
+
+    private Authorization.Request toAuthorizationRequest(Transaction transaction, TransactionRequest request) {
+        long amountInCents = request.amount().multiply(new BigDecimal("100")).longValue();
+        String panMasked = request.cardBin() + "******" + request.cardLastFour();
+
+        // Garante que pinBlock nunca seja nulo
+        String pinBlock = request.pinBlock() != null ? request.pinBlock() : "";
+
+        return Authorization.Request.builder()
+                .id(transaction.getId())
+                .merchantId(transaction.getMerchant().getId())
+                .terminalId(request.terminalSn())
+                .amountInCents(amountInCents)
+                .pinBlock(pinBlock) // Usando o valor garantido não-nulo
+                .panMasked(panMasked)
+                .cardHolderName(request.cardHolderName())
+                .build();
     }
 }

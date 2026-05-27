@@ -26,12 +26,19 @@ public class FinancialAgendaService {
 
     private final JpaSettlementEntryRepository repository;
 
-    public FinancialAgendaResponse getAgenda(UUID merchantId, int year, int month, int page, int size, String statusStr) {
+    public FinancialAgendaResponse getAgenda(
+            UUID merchantId,
+            int year,
+            int month,
+            int page,
+            int size,
+            String statusStr
+    ) {
         log.info("Buscando agenda financeira para merchant: {} | Mês: {}/{}", merchantId, month, year);
 
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
-        
+
         LocalDateTime start = startDate.atStartOfDay();
         LocalDateTime end = endDate.atTime(LocalTime.MAX);
 
@@ -60,7 +67,7 @@ public class FinancialAgendaService {
 
     public SettlementDetailResponse getSettlementDetail(UUID id) {
         log.info("Buscando detalhes da liquidação: {}", id);
-        
+
         AgendaItemProjection projection = repository.findDetailById(id)
                 .orElseThrow(() -> new DomainException("Detalhamento da liquidação não encontrado.", "SETTLEMENT_NOT_FOUND"));
 
@@ -82,21 +89,21 @@ public class FinancialAgendaService {
 
     private String mapInstallmentLabel(AgendaItemProjection projection) {
         if (projection.getInstallmentNumber() == null) return "1/1";
-        
-        // Simulação: se original amount > gross amount, inferimos que é parcelado.
-        // O ideal é ter o installments_total no banco. Como não temos, usaremos o label básico
         return projection.getInstallmentNumber().toString();
     }
 
     private String mapStatus(AgendaItemProjection projection) {
         if (projection.getPaidAt() != null) return "PAGO";
-        if ("SETTLED".equalsIgnoreCase(projection.getStatus())) return "AGENDADO";
+        // CORREÇÃO: SCHEDULED deve ser mapeado como AGENDADO para o lojista
+        if ("SCHEDULED".equalsIgnoreCase(projection.getStatus())) return "AGENDADO";
+        if ("ANTICIPATED".equalsIgnoreCase(projection.getStatus())) return "ANTECIPADO";
         return "PENDENTE";
     }
 
     private String mapTitularidade(AgendaItemProjection projection) {
         if (Boolean.TRUE.equals(projection.getBlocked())) return "VINCULADO A GARANTIA";
-        if (Boolean.TRUE.equals(projection.getAnticipated())) return "ANTECIPADO";
+        if (Boolean.TRUE.equals(projection.getAnticipated()) || "ANTICIPATED".equalsIgnoreCase(projection.getStatus()))
+            return "ANTECIPADO";
         return "DISPONÍVEL";
     }
 

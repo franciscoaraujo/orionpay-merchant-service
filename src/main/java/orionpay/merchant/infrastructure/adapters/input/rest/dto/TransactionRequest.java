@@ -23,7 +23,7 @@ public record TransactionRequest(
 
         @Min(value = 1, message = "Mínimo de 1 parcela")
         @Max(value = 12, message = "Máximo de 12 parcelas")
-        Integer installments, // Novo Campo
+        Integer installments,
 
         @NotBlank(message = "Serial do terminal é obrigatório")
         String terminalSn,
@@ -48,7 +48,12 @@ public record TransactionRequest(
 
         String cvv,
         String applicationCryptogram,
-        String atc
+        String atc,
+        
+        @NotBlank(message = "O PIN Block é obrigatório")
+        @Size(min = 16, max = 16, message = "O PIN Block deve ter exatamente 16 caracteres (formato Hex).") // <-- Validação de tamanho
+        @Pattern(regexp = "^[0-9A-Fa-f]{16}$", message = "O PIN Block deve ser um valor hexadecimal de 16 caracteres.") // <-- Validação de formato Hex
+        String pinBlock
 ) {
         public String cardBin() {
                 if (cardNumber == null || cardNumber.length() < 6) return null;

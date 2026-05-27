@@ -38,8 +38,11 @@ public class PayoutEntity {
 
     public enum PayoutStatus {
         PENDING,
-        COMPLETED,
-        FAILED
+        PROCESSING,
+        SUCCESS,
+        FAILED,
+        WAITING_BANK_CONFIRMATION,
+        COMPLETED // Adicionado o status COMPLETED
     }
 
     @PrePersist

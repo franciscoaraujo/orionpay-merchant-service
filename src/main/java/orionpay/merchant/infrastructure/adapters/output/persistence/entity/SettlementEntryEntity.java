@@ -7,13 +7,16 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import orionpay.merchant.domain.model.enums.SettlementStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "settlement_entry", schema = "ops")
+@Table(name = "settlement_entry", schema = "ops", 
+       uniqueConstraints = {@UniqueConstraint(name = "uk_settlement_transaction_installment", 
+                                            columnNames = {"transaction_id", "installment_number"})})
 @Data
 @Builder
 @NoArgsConstructor
@@ -30,8 +33,11 @@ public class SettlementEntryEntity {
     @Column(name = "merchant_id", nullable = false)
     private UUID merchantId;
 
-    @Column(name = "installment_number") // Novo campo para identificar a parcela
+    @Column(name = "installment_number")
     private Integer installmentNumber;
+
+    @Column(name = "total_installments")
+    private Integer totalInstallments;
 
     @Column(name = "terminal_id")
     private String terminalId;
@@ -53,10 +59,19 @@ public class SettlementEntryEntity {
     private SettlementStatus status;
 
     @Column(name = "is_blocked")
-    private Boolean blocked;
+    private Boolean blocked = false;
+
+    @Column(name = "is_collateral")
+    private Boolean isCollateral = false; // Vinculado a Garantia de Empréstimo
+
+    @Column(name = "blocked_reason")
+    private String blockedReason;
 
     @Column(name = "is_anticipated")
-    private Boolean anticipated;
+    private Boolean anticipated = false;
+
+    @Column(name = "prepayment_batch_id")
+    private UUID prepaymentBatchId;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -65,9 +80,6 @@ public class SettlementEntryEntity {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-
-    @Column(name = "mdr_rate", precision = 5, scale = 4)
-    private BigDecimal mdrRate;
 
     @Column(name = "mdr_percentage", precision = 5, scale = 4)
     private BigDecimal mdrPercentage;
@@ -81,8 +93,4 @@ public class SettlementEntryEntity {
 
     @Column(name = "original_amount", precision = 19, scale = 4)
     private BigDecimal originalAmount;
-
-    public enum SettlementStatus {
-        PENDING, SETTLED, FAILED
-    }
 }
