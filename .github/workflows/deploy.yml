@@ -1,0 +1,37 @@
+name: OrionPay CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "develop" ] # Dispara o deploy ao enviar para estas branches
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted # Indica que deve rodar na sua VM Orion-Server
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build com Maven
+        run: ./mvnw clean package -DskipTests
+
+      - name: Deploy (Restart do Serviço)
+        run: |
+          echo "🚀 Reiniciando OrionPay Interchange..."
+          # Mata o processo atual na porta 8085
+          sudo fuser -k 8085/tcp || true
+          
+          # Move o JAR para a pasta final de execução
+          mkdir -p ~/services/orionpay
+          cp orionpay-incoming-visa/target/*.jar ~/services/orionpay/app.jar
+          
+          # Executa em background
+          nohup java -jar ~/services/orionpay/app.jar > ~/services/orionpay/app.log 2>&1 &
+          echo "✅ Serviço iniciado com sucesso!"

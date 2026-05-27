@@ -226,3 +226,275 @@
 2026-04-08 12:29:32 [http-nio-8080-exec-2] INFO  o.m.d.service.AnticipationService - Simulando antecipação para Merchant: 0f6ac19c-1bc2-43f8-a289-d0cf39615f02
 2026-04-08 13:06:13 [http-nio-8080-exec-2] INFO  o.m.i.a.i.r.c.WithdrawController - Auditoria: Merchant 0f6ac19c-1bc2-43f8-a289-d0cf39615f02 solicitando histórico de saques.
 2026-04-08 13:06:15 [http-nio-8080-exec-10] INFO  o.m.d.service.AnticipationService - Simulando antecipação para Merchant: 0f6ac19c-1bc2-43f8-a289-d0cf39615f02
+2026-05-18 19:43:12 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2026-05-18 19:43:12 [main] INFO  o.m.OrionpayMerchantServiceApplication - Starting OrionpayMerchantServiceApplication using Java 25 with PID 44828 (C:\Users\chico\Github\projects\orionpay-merchant-service\target\classes started by chico in C:\Users\chico\Github\projects\orionpay-merchant-service)
+2026-05-18 19:43:12 [main] INFO  o.m.OrionpayMerchantServiceApplication - The following 1 profile is active: "local"
+2026-05-18 19:43:13 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanDefinitionStoreException: Failed to parse configuration class [orionpay.merchant.OrionpayMerchantServiceApplication]
+2026-05-18 19:43:13 [main] ERROR o.s.boot.SpringApplication - Application run failed
+org.springframework.beans.factory.BeanDefinitionStoreException: Failed to parse configuration class [orionpay.merchant.OrionpayMerchantServiceApplication]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:194)
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.processConfigBeanDefinitions(ConfigurationClassPostProcessor.java:418)
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.postProcessBeanDefinitionRegistry(ConfigurationClassPostProcessor.java:290)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanDefinitionRegistryPostProcessors(PostProcessorRegistrationDelegate.java:349)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:118)
+	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:792)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:610)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
+	at orionpay.merchant.OrionpayMerchantServiceApplication.main(OrionpayMerchantServiceApplication.java:23)
+Caused by: org.springframework.context.annotation.ConflictingBeanDefinitionException: Annotation-specified bean name 'dashboardMapperImpl' for bean class [orionpay.merchant.infrastructure.adapters.output.persistence.mapper.DashboardMapperImpl] conflicts with existing, non-compatible bean definition of same name and class [orionpay.merchant.application.web.backoffice.dto.DashboardMapperImpl]
+	at org.springframework.context.annotation.ClassPathBeanDefinitionScanner.checkCandidate(ClassPathBeanDefinitionScanner.java:361)
+	at org.springframework.context.annotation.ClassPathBeanDefinitionScanner.doScan(ClassPathBeanDefinitionScanner.java:288)
+	at org.springframework.context.annotation.ComponentScanAnnotationParser.parse(ComponentScanAnnotationParser.java:128)
+	at org.springframework.context.annotation.ConfigurationClassParser.doProcessConfigurationClass(ConfigurationClassParser.java:346)
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:281)
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:204)
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:172)
+	... 13 common frames omitted
+2026-05-18 19:53:08 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2026-05-18 19:53:08 [main] INFO  o.m.OrionpayMerchantServiceApplication - Starting OrionpayMerchantServiceApplication using Java 25 with PID 38740 (C:\Users\chico\Github\projects\orionpay-merchant-service\target\classes started by chico in C:\Users\chico\Github\projects\orionpay-merchant-service)
+2026-05-18 19:53:08 [main] INFO  o.m.OrionpayMerchantServiceApplication - The following 1 profile is active: "local"
+2026-05-18 19:53:09 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanDefinitionStoreException: Failed to parse configuration class [orionpay.merchant.OrionpayMerchantServiceApplication]
+2026-05-18 19:53:09 [main] ERROR o.s.boot.SpringApplication - Application run failed
+org.springframework.beans.factory.BeanDefinitionStoreException: Failed to parse configuration class [orionpay.merchant.OrionpayMerchantServiceApplication]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:194)
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.processConfigBeanDefinitions(ConfigurationClassPostProcessor.java:418)
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.postProcessBeanDefinitionRegistry(ConfigurationClassPostProcessor.java:290)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanDefinitionRegistryPostProcessors(PostProcessorRegistrationDelegate.java:349)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:118)
+	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:792)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:610)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
+	at orionpay.merchant.OrionpayMerchantServiceApplication.main(OrionpayMerchantServiceApplication.java:25)
+Caused by: org.springframework.context.annotation.ConflictingBeanDefinitionException: Annotation-specified bean name 'dashboardMapperImpl' for bean class [orionpay.merchant.infrastructure.adapters.output.persistence.mapper.DashboardMapperImpl] conflicts with existing, non-compatible bean definition of same name and class [orionpay.merchant.application.web.backoffice.dto.DashboardMapperImpl]
+	at org.springframework.context.annotation.ClassPathBeanDefinitionScanner.checkCandidate(ClassPathBeanDefinitionScanner.java:361)
+	at org.springframework.context.annotation.ClassPathBeanDefinitionScanner.doScan(ClassPathBeanDefinitionScanner.java:288)
+	at org.springframework.context.annotation.ComponentScanAnnotationParser.parse(ComponentScanAnnotationParser.java:128)
+	at org.springframework.context.annotation.ConfigurationClassParser.doProcessConfigurationClass(ConfigurationClassParser.java:346)
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:281)
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:204)
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:172)
+	... 13 common frames omitted
+2026-05-18 20:16:03 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2026-05-18 20:16:03 [main] INFO  o.m.OrionpayMerchantServiceApplication - Starting OrionpayMerchantServiceApplication using Java 25 with PID 43844 (C:\Users\chico\Github\projects\orionpay-merchant-service\target\classes started by chico in C:\Users\chico\Github\projects\orionpay-merchant-service)
+2026-05-18 20:16:03 [main] INFO  o.m.OrionpayMerchantServiceApplication - The following 1 profile is active: "local"
+2026-05-18 20:16:06 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanDefinitionStoreException: Failed to parse configuration class [orionpay.merchant.OrionpayMerchantServiceApplication]
+2026-05-18 20:16:06 [main] ERROR o.s.boot.SpringApplication - Application run failed
+org.springframework.beans.factory.BeanDefinitionStoreException: Failed to parse configuration class [orionpay.merchant.OrionpayMerchantServiceApplication]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:194)
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.processConfigBeanDefinitions(ConfigurationClassPostProcessor.java:418)
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.postProcessBeanDefinitionRegistry(ConfigurationClassPostProcessor.java:290)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanDefinitionRegistryPostProcessors(PostProcessorRegistrationDelegate.java:349)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:118)
+	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:792)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:610)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
+	at orionpay.merchant.OrionpayMerchantServiceApplication.main(OrionpayMerchantServiceApplication.java:25)
+Caused by: org.springframework.context.annotation.ConflictingBeanDefinitionException: Annotation-specified bean name 'dashboardMapperImpl' for bean class [orionpay.merchant.infrastructure.adapters.output.persistence.mapper.DashboardMapperImpl] conflicts with existing, non-compatible bean definition of same name and class [orionpay.merchant.application.web.backoffice.dto.DashboardMapperImpl]
+	at org.springframework.context.annotation.ClassPathBeanDefinitionScanner.checkCandidate(ClassPathBeanDefinitionScanner.java:361)
+	at org.springframework.context.annotation.ClassPathBeanDefinitionScanner.doScan(ClassPathBeanDefinitionScanner.java:288)
+	at org.springframework.context.annotation.ComponentScanAnnotationParser.parse(ComponentScanAnnotationParser.java:128)
+	at org.springframework.context.annotation.ConfigurationClassParser.doProcessConfigurationClass(ConfigurationClassParser.java:346)
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:281)
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:204)
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:172)
+	... 13 common frames omitted
+2026-05-18 20:16:29 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2026-05-18 20:16:29 [main] INFO  o.m.OrionpayMerchantServiceApplication - Starting OrionpayMerchantServiceApplication using Java 25 with PID 41420 (C:\Users\chico\Github\projects\orionpay-merchant-service\target\classes started by chico in C:\Users\chico\Github\projects\orionpay-merchant-service)
+2026-05-18 20:16:29 [main] INFO  o.m.OrionpayMerchantServiceApplication - The following 1 profile is active: "local"
+2026-05-18 20:16:29 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanDefinitionStoreException: Failed to parse configuration class [orionpay.merchant.OrionpayMerchantServiceApplication]
+2026-05-18 20:16:29 [main] ERROR o.s.boot.SpringApplication - Application run failed
+org.springframework.beans.factory.BeanDefinitionStoreException: Failed to parse configuration class [orionpay.merchant.OrionpayMerchantServiceApplication]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:194)
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.processConfigBeanDefinitions(ConfigurationClassPostProcessor.java:418)
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.postProcessBeanDefinitionRegistry(ConfigurationClassPostProcessor.java:290)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanDefinitionRegistryPostProcessors(PostProcessorRegistrationDelegate.java:349)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:118)
+	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:792)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:610)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
+	at orionpay.merchant.OrionpayMerchantServiceApplication.main(OrionpayMerchantServiceApplication.java:25)
+Caused by: org.springframework.context.annotation.ConflictingBeanDefinitionException: Annotation-specified bean name 'dashboardMapperImpl' for bean class [orionpay.merchant.infrastructure.adapters.output.persistence.mapper.DashboardMapperImpl] conflicts with existing, non-compatible bean definition of same name and class [orionpay.merchant.application.web.backoffice.dto.DashboardMapperImpl]
+	at org.springframework.context.annotation.ClassPathBeanDefinitionScanner.checkCandidate(ClassPathBeanDefinitionScanner.java:361)
+	at org.springframework.context.annotation.ClassPathBeanDefinitionScanner.doScan(ClassPathBeanDefinitionScanner.java:288)
+	at org.springframework.context.annotation.ComponentScanAnnotationParser.parse(ComponentScanAnnotationParser.java:128)
+	at org.springframework.context.annotation.ConfigurationClassParser.doProcessConfigurationClass(ConfigurationClassParser.java:346)
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:281)
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:204)
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:172)
+	... 13 common frames omitted
+2026-05-18 20:18:39 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2026-05-18 20:18:39 [main] INFO  o.m.OrionpayMerchantServiceApplication - Starting OrionpayMerchantServiceApplication using Java 25 with PID 20308 (C:\Users\chico\Github\projects\orionpay-merchant-service\target\classes started by chico in C:\Users\chico\Github\projects\orionpay-merchant-service)
+2026-05-18 20:18:39 [main] INFO  o.m.OrionpayMerchantServiceApplication - The following 1 profile is active: "local"
+2026-05-18 20:18:39 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanDefinitionStoreException: Failed to parse configuration class [orionpay.merchant.OrionpayMerchantServiceApplication]
+2026-05-18 20:18:39 [main] ERROR o.s.boot.SpringApplication - Application run failed
+org.springframework.beans.factory.BeanDefinitionStoreException: Failed to parse configuration class [orionpay.merchant.OrionpayMerchantServiceApplication]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:194)
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.processConfigBeanDefinitions(ConfigurationClassPostProcessor.java:418)
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.postProcessBeanDefinitionRegistry(ConfigurationClassPostProcessor.java:290)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanDefinitionRegistryPostProcessors(PostProcessorRegistrationDelegate.java:349)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:118)
+	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:792)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:610)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
+	at orionpay.merchant.OrionpayMerchantServiceApplication.main(OrionpayMerchantServiceApplication.java:25)
+Caused by: org.springframework.context.annotation.ConflictingBeanDefinitionException: Annotation-specified bean name 'dashboardMapperImpl' for bean class [orionpay.merchant.infrastructure.adapters.output.persistence.mapper.DashboardMapperImpl] conflicts with existing, non-compatible bean definition of same name and class [orionpay.merchant.application.web.backoffice.dto.DashboardMapperImpl]
+	at org.springframework.context.annotation.ClassPathBeanDefinitionScanner.checkCandidate(ClassPathBeanDefinitionScanner.java:361)
+	at org.springframework.context.annotation.ClassPathBeanDefinitionScanner.doScan(ClassPathBeanDefinitionScanner.java:288)
+	at org.springframework.context.annotation.ComponentScanAnnotationParser.parse(ComponentScanAnnotationParser.java:128)
+	at org.springframework.context.annotation.ConfigurationClassParser.doProcessConfigurationClass(ConfigurationClassParser.java:346)
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:281)
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:204)
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:172)
+	... 13 common frames omitted
+2026-05-18 20:19:58 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2026-05-18 20:19:58 [main] INFO  o.m.OrionpayMerchantServiceApplication - Starting OrionpayMerchantServiceApplication using Java 25 with PID 42204 (C:\Users\chico\Github\projects\orionpay-merchant-service\target\classes started by chico in C:\Users\chico\Github\projects\orionpay-merchant-service)
+2026-05-18 20:19:58 [main] INFO  o.m.OrionpayMerchantServiceApplication - The following 1 profile is active: "local"
+2026-05-18 20:19:59 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanDefinitionStoreException: Failed to parse configuration class [orionpay.merchant.OrionpayMerchantServiceApplication]
+2026-05-18 20:19:59 [main] ERROR o.s.boot.SpringApplication - Application run failed
+org.springframework.beans.factory.BeanDefinitionStoreException: Failed to parse configuration class [orionpay.merchant.OrionpayMerchantServiceApplication]
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:194)
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.processConfigBeanDefinitions(ConfigurationClassPostProcessor.java:418)
+	at org.springframework.context.annotation.ConfigurationClassPostProcessor.postProcessBeanDefinitionRegistry(ConfigurationClassPostProcessor.java:290)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanDefinitionRegistryPostProcessors(PostProcessorRegistrationDelegate.java:349)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:118)
+	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:792)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:610)
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:752)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:439)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1361)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1350)
+	at orionpay.merchant.OrionpayMerchantServiceApplication.main(OrionpayMerchantServiceApplication.java:25)
+Caused by: org.springframework.context.annotation.ConflictingBeanDefinitionException: Annotation-specified bean name 'dashboardMapperImpl' for bean class [orionpay.merchant.infrastructure.adapters.output.persistence.mapper.DashboardMapperImpl] conflicts with existing, non-compatible bean definition of same name and class [orionpay.merchant.application.web.backoffice.dto.DashboardMapperImpl]
+	at org.springframework.context.annotation.ClassPathBeanDefinitionScanner.checkCandidate(ClassPathBeanDefinitionScanner.java:361)
+	at org.springframework.context.annotation.ClassPathBeanDefinitionScanner.doScan(ClassPathBeanDefinitionScanner.java:288)
+	at org.springframework.context.annotation.ComponentScanAnnotationParser.parse(ComponentScanAnnotationParser.java:128)
+	at org.springframework.context.annotation.ConfigurationClassParser.doProcessConfigurationClass(ConfigurationClassParser.java:346)
+	at org.springframework.context.annotation.ConfigurationClassParser.processConfigurationClass(ConfigurationClassParser.java:281)
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:204)
+	at org.springframework.context.annotation.ConfigurationClassParser.parse(ConfigurationClassParser.java:172)
+	... 13 common frames omitted
+2026-05-18 20:22:53 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 8.0.3.Final
+2026-05-18 20:22:53 [main] INFO  o.m.OrionpayMerchantServiceApplication - Starting OrionpayMerchantServiceApplication using Java 25 with PID 46112 (C:\Users\chico\Github\projects\orionpay-merchant-service\target\classes started by chico in C:\Users\chico\Github\projects\orionpay-merchant-service)
+2026-05-18 20:22:53 [main] INFO  o.m.OrionpayMerchantServiceApplication - The following 1 profile is active: "local"
+2026-05-18 20:22:54 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Multiple Spring Data modules found, entering strict repository configuration mode
+2026-05-18 20:22:54 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 220 ms. Found 15 JPA repository interfaces.
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Multiple Spring Data modules found, entering strict repository configuration mode
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaAuditLogRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaAuthUserRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaDailySummaryRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaJournalRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaLedgerAccountRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaLedgerEntryRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaMerchantRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaOutboxRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaPayoutRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaPricingRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaRefreshTokenRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaSettlementEntryRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaTerminalRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.JpaTransactionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationExtensionSupport - Spring Data Redis - Could not safely identify store assignment for repository candidate interface orionpay.merchant.infrastructure.adapters.output.persistence.TransactionRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-05-18 20:22:55 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 31 ms. Found 0 Redis repository interfaces.
+2026-05-18 20:22:56 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat initialized with port 8085 (http)
+2026-05-18 20:22:56 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8085"]
+2026-05-18 20:22:56 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-05-18 20:22:56 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.52]
+2026-05-18 20:22:56 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-05-18 20:22:56 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 2969 ms
+2026-05-18 20:22:56 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-05-18 20:22:56 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.42.Final
+2026-05-18 20:22:56 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2026-05-18 20:22:57 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-05-18 20:22:57 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2026-05-18 20:22:57 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@259c6ab8
+2026-05-18 20:22:57 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2026-05-18 20:22:57 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-05-18 20:22:57 [main] INFO  o.hibernate.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 18.2
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-05-18 20:22:58 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-05-18 20:22:59 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-05-18 20:22:59 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-05-18 20:23:01 [main] INFO  o.s.s.c.a.a.c.InitializeAuthenticationProviderBeanManagerConfigurer$InitializeAuthenticationProviderManagerConfigurer - Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2026-05-18 20:23:01 [main] WARN  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2026-05-18 20:23:02 [main] INFO  o.m.i.a.o.p.RedisHealthCheck - Testando conexão com Redis...
+2026-05-18 20:23:02 [main] INFO  o.m.i.a.o.p.RedisHealthCheck - Escrita no Redis: OK
+2026-05-18 20:23:02 [main] INFO  o.m.i.a.o.p.RedisHealthCheck - Leitura no Redis: OK. Valor recuperado: Redis está UP! 2026-05-18T20:23:02.515188800
+2026-05-18 20:23:02 [main] INFO  o.m.i.a.o.p.RedisHealthCheck - Deleção no Redis: OK
+2026-05-18 20:23:02 [main] INFO  o.m.i.a.o.p.RedisHealthCheck - ✅ Conexão com Redis estabelecida com sucesso!
+2026-05-18 20:23:03 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-05-18 20:23:04 [main] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Starting...
+2026-05-18 20:23:04 [main] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@2dbf765d]]
+2026-05-18 20:23:04 [main] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Started.
+2026-05-18 20:23:04 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8085"]
+2026-05-18 20:23:04 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer - Tomcat started on port 8085 (http) with context path '/'
+2026-05-18 20:23:04 [main] INFO  o.s.a.r.c.CachingConnectionFactory - Attempting to connect to: [localhost:5672]
+2026-05-18 20:23:04 [main] INFO  o.s.a.r.c.CachingConnectionFactory - Created new connection: rabbitConnectionFactory#3b342b4d:0/SimpleConnection@79374f2d [delegate=amqp://guest@127.0.0.1:5672/, localPort=49889]
+2026-05-18 20:23:04 [main] INFO  o.m.OrionpayMerchantServiceApplication - Started OrionpayMerchantServiceApplication in 12.175 seconds (process running for 12.877)
+2026-05-18 20:23:29 [http-nio-8085-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-18 20:23:29 [http-nio-8085-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-05-18 20:23:29 [http-nio-8085-exec-1] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-05-18 20:23:30 [http-nio-8085-exec-2] INFO  o.m.i.a.i.r.c.TransactionController - >>> Recebida requisição de autorização para o cartão final: 2776
+2026-05-18 20:23:30 [http-nio-8085-exec-2] INFO  o.m.d.service.IdempotencyService - Chave de idempotência bloqueada: 4f85a774-25a1-4c36-9817-6661cbce5199
+2026-05-18 20:23:30 [http-nio-8085-exec-2] INFO  o.m.d.s.AuthorizeTransactionUseCase - Iniciando autorização de transação para o merchantId: 0f6ac19c-1bc2-43f8-a289-d0cf39615f02 | Valor: 12.3
+2026-05-18 20:23:30 [http-nio-8085-exec-2] INFO  o.m.d.s.AuthorizeTransactionUseCase - Enviando transação para o Gateway. TransactionId: 90c65571-0528-423e-9881-8d44b994cd03
+2026-05-18 20:23:30 [http-nio-8085-exec-2] INFO  o.m.i.a.o.p.VisaPaymentGatewayAdapter - >>> [VISA GATEWAY] Autorizando transação de R$ 12.3 p/ Cartão final 2776
+2026-05-18 20:23:30 [http-nio-8085-exec-2] INFO  o.m.i.a.o.p.VisaGatewayClientService - >>> ISO 8583 Request Payload (STAN: 000001): 01 00 72 20 00 00 00 C0 80 00 16 43 50 87 01 93 82 27 76 00 00 00 00 00 00 00 12 30 05 18 20 23 30 00 00 01 50 4F 53 2D 4F 52 49 4F 30 66 36 61 63 31 39 63 2D 31 62 63 32 2D 34 39 38 36
+2026-05-18 20:23:30 [http-nio-8085-exec-2] INFO  o.m.i.a.o.p.VisaGatewayClientService - <<< ISO 8583 Response Payload (Length: 64): 01 10 72 20 00 00 02 C0 80 00 16 43 50 87 01 93 82 27 76 00 00 00 00 00 00 00 12 30 05 18 20 23 30 00 00 01 30 30 50 4F 53 2D 4F 52 49 4F 30 66 36 61 63 31 39 63 2D 31 62 63 32 2D 34 39 38 36
+2026-05-18 20:23:30 [http-nio-8085-exec-2] INFO  o.m.d.s.AuthorizeTransactionUseCase - Transação autorizada e persistida com sucesso. ID: 90c65571-0528-423e-9881-8d44b994cd03 | NSU: 9146610212
+2026-05-18 20:23:30 [http-nio-8085-exec-2] INFO  o.s.s.a.AnnotationAsyncExecutionInterceptor - More than one TaskExecutor bean found within the context, and none is named 'taskExecutor'. Mark one of them as primary or name it 'taskExecutor' (possibly as an alias) in order to use it for async processing: [clientInboundChannelExecutor, clientOutboundChannelExecutor, brokerChannelExecutor, messageBrokerTaskScheduler]
+2026-05-18 20:23:30 [SimpleAsyncTaskExecutor-1] INFO  o.m.i.a.o.m.WebSocketLiveTransactionAdapter - Broadcasting live event for transactionId: 90c65571-0528-423e-9881-8d44b994cd03
+2026-05-18 20:23:30 [MessageBroker-8] INFO  o.m.i.a.output.messaging.OutboxRelay - Processando 1 eventos pendentes na Outbox...
+2026-05-18 20:23:30 [org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0-1] INFO  o.m.domain.service.SettlementService - Iniciando orquestração de liquidação | Transação: 90c65571-0528-423e-9881-8d44b994cd03
+2026-05-18 20:23:30 [org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0-1] INFO  o.m.i.a.o.p.LedgerRepositoryAdapter - Lançamento de CREDIT registrado para a conta ACC-0F6AC19C [Journal: b4e0fc97-947c-481b-b044-94ff17c6ad77] | Disponível em: 2026-06-17T20:23:30.239436
+2026-05-18 20:23:30 [org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0-1] INFO  o.m.domain.service.SettlementService - Parcela 1 promovida para SCHEDULED via Ledger.
+2026-05-18 20:23:30 [org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0-1] INFO  o.m.domain.service.SettlementService - Orquestração de liquidação finalizada com sucesso para transação: 90c65571-0528-423e-9881-8d44b994cd03
+2026-05-18 20:24:04 [MessageBroker-2] INFO  o.s.w.s.c.WebSocketMessageBrokerStats - WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 16, active threads = 1, queued tasks = 1, completed tasks = 119]
+2026-05-18 20:24:45 [http-nio-8085-exec-1] INFO  o.m.i.a.i.r.c.TransactionController - >>> Recebida requisição de autorização para o cartão final: 2776
+2026-05-18 20:24:45 [http-nio-8085-exec-1] INFO  o.m.d.service.IdempotencyService - Chave de idempotência bloqueada: 08ec10c5-155c-40ac-89fd-4439e15ea717
+2026-05-18 20:24:45 [http-nio-8085-exec-1] INFO  o.m.d.s.AuthorizeTransactionUseCase - Iniciando autorização de transação para o merchantId: 0f6ac19c-1bc2-43f8-a289-d0cf39615f02 | Valor: 12.35
+2026-05-18 20:24:45 [http-nio-8085-exec-1] INFO  o.m.d.s.AuthorizeTransactionUseCase - Enviando transação para o Gateway. TransactionId: f866df30-68a3-48fe-a8c4-c0145d0a0209
+2026-05-18 20:24:45 [http-nio-8085-exec-1] INFO  o.m.i.a.o.p.VisaPaymentGatewayAdapter - >>> [VISA GATEWAY] Autorizando transação de R$ 12.35 p/ Cartão final 2776
+2026-05-18 20:24:45 [http-nio-8085-exec-1] INFO  o.m.i.a.o.p.VisaGatewayClientService - >>> ISO 8583 Request Payload (STAN: 000002): 01 00 72 20 00 00 00 C0 80 00 16 43 50 87 01 93 82 27 76 00 00 00 00 00 00 00 12 35 05 18 20 24 45 00 00 02 50 4F 53 2D 4F 52 49 4F 30 66 36 61 63 31 39 63 2D 31 62 63 32 2D 34 39 38 36
+2026-05-18 20:24:45 [http-nio-8085-exec-1] INFO  o.m.i.a.o.p.VisaGatewayClientService - <<< ISO 8583 Response Payload (Length: 64): 01 10 72 20 00 00 02 C0 80 00 16 43 50 87 01 93 82 27 76 00 00 00 00 00 00 00 12 35 05 18 20 24 45 00 00 02 30 30 50 4F 53 2D 4F 52 49 4F 30 66 36 61 63 31 39 63 2D 31 62 63 32 2D 34 39 38 36
+2026-05-18 20:24:45 [http-nio-8085-exec-1] INFO  o.m.d.s.AuthorizeTransactionUseCase - Transação autorizada e persistida com sucesso. ID: f866df30-68a3-48fe-a8c4-c0145d0a0209 | NSU: 9146685389
+2026-05-18 20:24:45 [SimpleAsyncTaskExecutor-2] INFO  o.m.i.a.o.m.WebSocketLiveTransactionAdapter - Broadcasting live event for transactionId: f866df30-68a3-48fe-a8c4-c0145d0a0209
+2026-05-18 20:24:45 [MessageBroker-5] INFO  o.m.i.a.output.messaging.OutboxRelay - Processando 1 eventos pendentes na Outbox...
+2026-05-18 20:24:45 [org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0-1] INFO  o.m.domain.service.SettlementService - Iniciando orquestração de liquidação | Transação: f866df30-68a3-48fe-a8c4-c0145d0a0209
+2026-05-18 20:24:45 [org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0-1] INFO  o.m.i.a.o.p.LedgerRepositoryAdapter - Lançamento de CREDIT registrado para a conta ACC-0F6AC19C [Journal: c6daf402-b385-41d2-81ee-23b8b5543dac] | Disponível em: 2026-06-17T20:24:45.398413900
+2026-05-18 20:24:45 [org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0-1] INFO  o.m.domain.service.SettlementService - Parcela 1 promovida para SCHEDULED via Ledger.
+2026-05-18 20:24:45 [org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0-1] INFO  o.m.domain.service.SettlementService - Orquestração de liquidação finalizada com sucesso para transação: f866df30-68a3-48fe-a8c4-c0145d0a0209

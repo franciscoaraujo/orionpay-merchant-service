@@ -12,6 +12,54 @@ O projeto segue uma arquitetura limpa, separando o núcleo de negócio das tecno
 
 ---
 
+## 🌊 Fluxo da Transação
+
+O fluxo de uma transação é projetado para ser robusto e resiliente, garantindo a consistência dos dados e a capacidade de recuperação em caso de falhas.
+
+### Diagrama do Fluxo
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant TransactionController
+    participant AuthorizeTransactionUseCase
+    participant Transactional Outbox
+    participant RabbitMQ
+    participant SettlementService
+
+    Client->>TransactionController: POST /api/v1/transactions/authorize
+    TransactionController->>AuthorizeTransactionUseCase: execute(request, idempotencyKey)
+    AuthorizeTransactionUseCase->>Transactional Outbox: Salva a transação e o evento
+    Transactional Outbox-->>AuthorizeTransactionUseCase: Transação e evento salvos
+    AuthorizeTransactionUseCase-->>TransactionController: TransactionResponse
+    TransactionController-->>Client: 200 OK
+    Note right of Transactional Outbox: Outbox Relay (assíncrono)
+    Transactional Outbox->>RabbitMQ: Publica o evento
+    RabbitMQ->>SettlementService: Consome o evento da fila
+    SettlementService->>SettlementService: Processa a liquidação
+```
+
+### Etapas do Fluxo
+
+1.  **Requisição**: O cliente (PDV, e-commerce, etc.) envia uma requisição `POST` para o endpoint `/api/v1/transactions/authorize` com os dados da transação e um `X-Idempotency-Key` no cabeçalho.
+2.  **Controlador**: O `TransactionController` recebe a requisição e chama o caso de uso `AuthorizeTransactionUseCase`.
+3.  **Caso de Uso**: O `AuthorizeTransactionUseCase` orquestra a lógica de negócio para autorizar a transação.
+4.  **Transactional Outbox**: A transação e um evento de domínio (ex: `TransactionAuthorizedEvent`) são salvos na mesma transação do banco de dados. Isso garante que o evento só será publicado se a transação for bem-sucedida.
+5.  **Resposta**: O caso de uso retorna uma `TransactionResponse` para o controlador, que por sua vez responde ao cliente com um `200 OK`.
+6.  **Publicação Assíncrona**: Um processo em segundo plano (Outbox Relay) monitora a tabela de outbox e publica os eventos pendentes no RabbitMQ. Isso garante que os eventos sejam entregues pelo menos uma vez (at-least-once delivery).
+7.  **Consumo do Evento**: O `SettlementService` consome o evento da fila do RabbitMQ e inicia o processo de liquidação da transação.
+
+### Consumidor do Evento: `SettlementService`
+
+O `SettlementService` é o responsável por consumir o `TransactionEvent` e orquestrar a liquidação da transação. Suas principais responsabilidades são:
+
+*   **Cálculo de Parcelas**: Decompõe a transação em parcelas, calculando o valor líquido e a data de vencimento de cada uma.
+*   **Registro no Ledger**: Interage com o `LedgerIntegrationService` para registrar os lançamentos contábeis correspondentes a cada parcela.
+*   **Resiliência**: Utiliza o padrão Circuit Breaker para lidar com falhas de comunicação com o Ledger, garantindo que a transação não seja perdida.
+*   **Idempotência**: Garante que a mesma transação não seja processada mais de uma vez.
+
+---
+
 ## ✨ Funcionalidades e Otimizações de Elite
 
 ### 1. Pattern Transactional Outbox (Consistência Eventual Garantida) 🛡️

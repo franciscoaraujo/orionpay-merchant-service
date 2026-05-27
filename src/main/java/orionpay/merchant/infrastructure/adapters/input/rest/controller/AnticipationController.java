@@ -22,14 +22,9 @@ public class AnticipationController {
     private final PrepaymentUseCase prepaymentUseCase;
     private final SecurityContextService securityContextService;
 
-    /**
-     * Endpoint p/ listar recebíveis disponíveis para antecipação.
-     * @param id Extraído da URL (prioridade p/ testes) ou do Contexto de Segurança.
-     */
+
     @GetMapping("/{id}/anticipation/available")
     public ResponseEntity<AnticipationResponse> getAvailableForAnticipation(@PathVariable UUID id) {
-        // Para testes manuais, usamos o ID da URL. 
-        // Em produção, o ideal é validar se o ID da URL == ID do Token.
         AnticipationResponse response = service.getAvailableSettlements(id);
         return ResponseEntity.ok(response);
     }
