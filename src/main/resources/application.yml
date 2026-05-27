@@ -44,6 +44,13 @@ spring:
 server:
   port: 8080
 
+# --- gRPC Client Configuration ---
+grpc:
+  client:
+    adquiring-switch-service:
+      address: 'static://172.20.145.87:8583'
+      negotiation-type: plaintext
+
 # --- SEGURANÇA E JWT ---
 jwt:
   secret: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
@@ -61,7 +68,6 @@ resilience4j:
         slidingWindowSize: 10
         permittedNumberOfCallsInHalfOpenState: 3
         registerHealthIndicator: true
-        eventConsumerBufferSize: 10
   bulkhead:
     instances:
       ledgerBulkhead:

@@ -1,3 +1,4 @@
+/*
 package orionpay.merchant.application.ports.output.gateway;
 
 import lombok.extern.slf4j.Slf4j;
@@ -38,3 +39,4 @@ public class MockPaymentGatewayAdapter implements PaymentGatewayPort {
         return true;
     }
 }
+*/

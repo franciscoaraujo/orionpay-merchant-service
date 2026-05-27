@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package orionpay.merchant.grpc.acquiringswitch.v1;
+
+option java_package = "com.orionpay.merchant.grpc.acquirerswitch.v1";
+option java_multiple_files = true;
+
+// O serviço que o Switch irá expor
+service AcquiringSwitchService {
+  // O método de autorização que o cliente Java chama
+  rpc AuthorizeTransaction(AuthorizeRequest) returns (AuthorizeResponse);
+}
+
+// A mensagem de requisição, baseada no log do cliente Java
+message AuthorizeRequest {
+  string id = 1;
+  string merchant_id = 2;
+  string terminal_id = 3;
+  string amount = 4;
+  int32 currency_code = 5;
+  string pin_block_terminal = 6;
+  string pan_masked = 7;
+}
+
+// Uma mensagem de resposta simples
+message AuthorizeResponse {
+  string transaction_id = 1;
+  string status_code = 2; // Ex: "00" para Aprovado, "51" para Saldo Insuficiente
+  string description = 3;
+}
