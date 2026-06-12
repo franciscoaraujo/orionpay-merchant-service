@@ -1,33 +1,25 @@
 package orionpay.merchant.domain.model.enums;
 
-public enum EntryType {
-    /**
-     * Entrada de recurso na conta do lojista.
-     * Ex: Liquidação de uma venda (Settlement) ou ajuste a favor.
-     */
-    CREDIT("Crédito"),
+import lombok.Getter;
 
-    /**
-     * Saída de recurso da conta do lojista.
-     * Ex: Cobrança de taxas, estorno de venda (Chargeback) ou transferência bancária.
-     */
-    DEBIT("Débito");
+@Getter
+public enum EntryType {
+    CREDIT("Crédito", 1),
+    DEBIT("Débito", -1),
+    WITHDRAWAL_HOLD("Reserva de Saque", -1),
+    WITHDRAWAL_COMPLETED("Saque Concluído", -1),
+    WITHDRAWAL_REVERSAL("Estorno de Saque", 1),
+    PREPAYMENT_CREDIT("Crédito de Antecipação", 1),
+    PREPAYMENT_FEE("Taxa de Antecipação", -1),
+    REFUND_HOLD("Reserva de Estorno", -1),      // Bloqueia o saldo para o estorno
+    REFUND_DEBIT("Estorno Concluído", -1),      // Baixa definitiva do saldo
+    REFUND_REVERSAL("Estorno Revertido", 1);    // Devolve o saldo se o estorno falhar
 
     private final String description;
+    private final int multiplier;
 
-    EntryType(String description) {
+    EntryType(String description, int multiplier) {
         this.description = description;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    /**
-     * REGRA DE NEGÓCIO: Define o multiplicador para cálculo de saldo.
-     * Créditos somam (1), Débitos subtraem (-1).
-     */
-    public int getMultiplier() {
-        return this == CREDIT ? 1 : -1;
+        this.multiplier = multiplier;
     }
 }

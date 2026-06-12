@@ -2,6 +2,8 @@ package orionpay.merchant.domain.model;
 
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import orionpay.merchant.domain.excepion.DomainException;
 import orionpay.merchant.domain.model.enums.ProductType;
 
@@ -10,10 +12,12 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Getter
+@Setter // Adicionado para permitir desserialização e mapeamento
+@NoArgsConstructor // Necessário para Jackson (Redis)
 public class MerchantPricing {
-    private final UUID merchantId;
-    private final String brand;
-    private final ProductType productType;
+    private UUID merchantId;
+    private String brand;
+    private ProductType productType;
     private BigDecimal mdrPercentage;
     private LocalDate effectiveDate;
 
@@ -22,7 +26,7 @@ public class MerchantPricing {
         return new MerchantPricing(null, brand, productType, null, null);
     }
 
-    // Construtor completo para MapStruct
+    // Construtor completo para MapStruct e reconstrução
     public MerchantPricing(
             UUID merchantId,
             String brand,

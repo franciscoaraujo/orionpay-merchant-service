@@ -4,9 +4,9 @@ import java.math.BigDecimal;
 
 public interface TransactionSummaryProjection {
 
-    BigDecimal getTotalVolume();    // Para o R$ 100,00
+    BigDecimal getTotalVolume();    // TPV Bruto
 
-    BigDecimal getApprovedVolume(); // Para o R$ 96,50
+    BigDecimal getNetVolume();      // Net Revenue (TPV - MDR)
 
     Long getTotalCount();
 

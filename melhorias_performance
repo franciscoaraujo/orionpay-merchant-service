@@ -1,0 +1,38 @@
+Com a Sprint 1 concluída (Read Models e O(1) Dashboard), a OrionPay já resolveu o gargalo de processamento imediato. O sistema agora é performático para o dia a dia.
+As próximas etapas focam em volume massivo de dados, isolamento de tráfego e inteligência de Big Data. Aqui estão as tarefas detalhadas:
+
+🟢 Sprint 2: Escalabilidade de Dados (Table Partitioning)
+Foco: Garantir que o banco de dados não fique lento conforme os anos passam.
+•Tarefa 2.1: Migração para Tabelas Particionadas
+◦Refatorar as tabelas core.transaction e ops.settlement_entry para usar PARTITION BY RANGE (created_at).
+◦Criar script de migração de dados das tabelas atuais para as novas estruturas particionadas.
+•Tarefa 2.2: Implementação do Partition Manager
+◦Criar um componente no Spring Boot (Scheduled Task) que verifica e cria automaticamente as partições dos próximos 3 meses (ex: transaction_2026_04).
+•Tarefa 2.3: Otimização de Índices Locais
+◦Garantir que os índices de merchant_id sejam criados em cada partição individualmente para buscas ultra-rápidas dentro do mês.
+•Tarefa 2.4: Validação de Query Pruning
+◦Testar via EXPLAIN ANALYZE se o PostgreSQL está ignorando partições antigas ao buscar dados do mês atual.
+
+🔵 Sprint 3: Alta Disponibilidade (CQRS Lite & Read Replicas)
+Foco: Garantir que o Dashboard nunca interfira na velocidade de uma venda (Autorização).
+•Tarefa 3.1: Configuração de Infraestrutura de Réplica
+◦Configurar uma instância de leitura (Read Replica) do PostgreSQL.
+•Tarefa 3.2: Roteador Dinâmico de DataSources
+◦Implementar a classe TransactionRoutingDataSource que estende AbstractRoutingDataSource.
+◦Configurar dois pools de conexão: Master (Escrita) e Replica (Leitura).
+•Tarefa 3.3: AOP para Roteamento Automático
+◦Criar uma anotação ou interceptor que detecta @Transactional(readOnly = true) e direciona a conexão para a réplica de leitura automaticamente.
+•Tarefa 3.4: Teste de Isolamento de Carga
+◦Simular 1.000 lojistas acessando o Dashboard simultaneamente e validar que a latência de autorização de transações no Master permanece inalterada.
+
+🟣 Sprint 4: Inteligência de Dados (OLAP Engine)
+Foco: Análises históricas de anos e previsões financeiras.
+•Tarefa 4.1: Pipeline de Sincronização (CDC)
+◦Implementar um consumer de RabbitMQ ou usar Debezium para enviar cópias de todas as transações para um banco colunar (ClickHouse).
+•Tarefa 4.2: Implementação de Métricas de Longo Prazo
+◦Criar queries no ClickHouse para calcular "Sazonalidade de Vendas por Ano" e "Comparativo de Faturamento vs Mesma Época do Ano Anterior".
+•Tarefa 4.3: API de Analytics Avançado
+◦Criar novos endpoints no DashboardController para fornecer dados de BI (Business Intelligence) que seriam impossíveis/lentos no PostgreSQL.
+•Tarefa 4.4: Detecção de Anomalias (Opcional)
+◦Implementar lógica de detecção de fraude ou quedas bruscas de faturamento baseada no histórico massivo de dados.
+Qual destas será a nossa prioridade para a próxima semana? Se o volume de transações está crescendo rápido, recomendo a Sprint 2. Se você planeja ter muitos usuários acessando o Dashboard ao mesmo tempo, a Sprint 3 é mais urgente.

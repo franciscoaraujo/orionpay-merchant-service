@@ -23,6 +23,10 @@ public record MerchantRegistrationRequest(
         @Email(message = "E-mail inválido")
         String email,
 
+        @NotBlank(message = "Senha é obrigatória")
+        @Size(min = 8, max = 100, message = "Senha deve ter entre 8 e 100 caracteres")
+        String password,
+
         // --- Dados de Endereço ---
         @NotBlank(message = "CEP é obrigatório")
         @Pattern(regexp = "^\\d{8}$", message = "CEP deve conter 8 dígitos")

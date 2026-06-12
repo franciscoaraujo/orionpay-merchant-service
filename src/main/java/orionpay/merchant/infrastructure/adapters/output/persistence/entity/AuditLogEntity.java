@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 public class AuditLogEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     private String userEmail;

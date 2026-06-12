@@ -1,6 +1,9 @@
 package orionpay.merchant.domain.model;
 
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import orionpay.merchant.domain.excepion.DomainException;
 import orionpay.merchant.domain.model.enums.ProductType;
 import orionpay.merchant.domain.model.enums.TransactionStatus;
@@ -11,17 +14,18 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
+@Setter // Adicionado para permitir que Mappers e frameworks de persistência preencham o objeto
 public class Transaction {
-    private final UUID id;
-    private final Merchant merchant;
-    private final BigDecimal amount;
-    private final String currency;
+    private UUID id;
+    private Merchant merchant;
+    private BigDecimal amount;
+    private String currency;
     private String nsu;
     private String authorizationCode;
-    private final ProductType productType;
-    private final TransactionSource source;
+    private ProductType productType;
+    private TransactionSource source;
     private TransactionStatus status;
-    private final LocalDateTime createdAt;
+    private LocalDateTime createdAt;
 
     private String cardBrand;
     private String cardBin;
@@ -29,10 +33,12 @@ public class Transaction {
     private String cardHolderName;
 
     private BigDecimal netAmount; // Valor após taxas
-
-    // Novo campo sugerido para guardar o motivo de recusa
     private String refusalReason;
 
+    // Construtor padrão para frameworks
+    public Transaction() {}
+
+    // Construtor de Negócio
     public Transaction(
             UUID id,
             Merchant merchant,
@@ -46,7 +52,7 @@ public class Transaction {
         this.currency = "BRL";
         this.productType = productType;
         this.source = source;
-        this.status = TransactionStatus.PENDING; // Nasce sempre como pendente
+        this.status = TransactionStatus.PENDING;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -85,12 +91,9 @@ public class Transaction {
         }
 
         this.status = TransactionStatus.DECLINED;
-        this.refusalReason = errorMessage; // Salva o motivo (ex: "51 - Saldo Insuficiente")
+        this.refusalReason = errorMessage;
     }
 
-    /**
-     * REGRA DE NEGÓCIO: Estorno da transação.
-     */
     public void reverse() {
         if (this.status != TransactionStatus.APPROVED) {
             throw new DomainException("Apenas transações aprovadas podem ser estornadas.");
@@ -99,7 +102,6 @@ public class Transaction {
     }
 
     public void calculateNetValue(BigDecimal mdrPercentage) {
-        // Regra: Valor - (Valor * (MDR / 100))
         BigDecimal fee = this.amount.multiply(mdrPercentage)
                 .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
         this.netAmount = this.amount.subtract(fee);

@@ -1,18 +1,27 @@
 package orionpay.merchant.application.ports.input.rest.dto;
 
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 import java.util.List;
 
 @Data
 @Builder
+@NoArgsConstructor // Necessário para Jackson (Redis)
+@AllArgsConstructor // Necessário para o Builder funcionar com o NoArgsConstructor
 public class DashboardSummaryDto {
 
     // --- CARDS PRINCIPAIS (TOP) ---
-    private BigDecimal tpv;               // Total Processed Volume (Bruto)
-    private BigDecimal netRevenue;        // Receita Líquida (TPV - MDR)
+    private BigDecimal totalTpv;               // Total Processed Volume (Bruto)
+    private BigDecimal totalNetRevenue;        // Receita Líquida (TPV - MDR)
+    private BigDecimal ticketMedia;            // Ticket Médio (totalTpv / countTransactions)
+    private Long countTransactions;            // Número total de transações aprovadas
+    private PercentualComparison percentualComparison; // Comparação percentual vs período anterior
+
     private Double approvalRate;          // % de Aprovação
     private Long activeTerminals;         // Total de Terminais Ativos
     private BigDecimal availableBalance;  // Saldo na accounting.ledger_account
@@ -30,6 +39,8 @@ public class DashboardSummaryDto {
      */
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class HourlySalesDTO {
         private int hour;           // 0 a 23
         private BigDecimal today;    // Valor hoje nessa hora
@@ -41,9 +52,25 @@ public class DashboardSummaryDto {
      */
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class BrandDistributionDTO {
         private String brand;        // Nome da bandeira
         private BigDecimal value;    // Volume total
         private Double percentage;   // % representativa no TPV
+    }
+
+    /**
+     * DTO interno para a comparação percentual
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PercentualComparison {
+        private BigDecimal tpvComparison;
+        private BigDecimal netRevenueComparison;
+        private BigDecimal ticketMediaComparison;
+        private BigDecimal countTransactionsComparison;
     }
 }

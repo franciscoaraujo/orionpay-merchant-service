@@ -4,6 +4,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import orionpay.merchant.application.ports.input.rest.dto.MerchantResponse;
 import orionpay.merchant.domain.event.MerchantCreatedEvent;
@@ -27,6 +28,7 @@ public class RegisterMerchantUseCase {
 
     private final MerchantRepository merchantRepository;
     private final ApplicationEventPublisher eventPublisher; // Orquestrador de eventos
+    private final AuthenticationService authenticationService;
 
     @Transactional
     public MerchantResponse execute(MerchantRegistrationRequest request) {
@@ -58,6 +60,7 @@ public class RegisterMerchantUseCase {
 
         // 4. Persistir apenas o Lojista
         Merchant savedMerchant = merchantRepository.save(merchant);
+        authenticationService.registerMerchantUser(request.email(), request.password(), savedMerchant.getId());
 
         // 5. DISPARAR EVENTO: "Aconteceu algo no meu módulo!"
         eventPublisher.publishEvent(new MerchantCreatedEvent(

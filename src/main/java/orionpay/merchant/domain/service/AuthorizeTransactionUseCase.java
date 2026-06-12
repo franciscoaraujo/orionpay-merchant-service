@@ -5,23 +5,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
-import orionpay.merchant.application.ports.output.GatewayAuthorizationResult;
-import orionpay.merchant.application.ports.output.PaymentGatewayPort;
+import orionpay.merchant.application.ports.output.*;
 import orionpay.merchant.domain.excepion.DomainException;
-import orionpay.merchant.domain.model.IdempotencyResult;
-import orionpay.merchant.domain.model.LedgerAccount;
-import orionpay.merchant.domain.model.Merchant;
-import orionpay.merchant.domain.model.Transaction;
-import orionpay.merchant.domain.model.TransactionSource;
-import orionpay.merchant.domain.model.enums.EntryType;
+import orionpay.merchant.domain.model.*;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.TransactionRequest;
 import orionpay.merchant.infrastructure.adapters.input.rest.dto.TransactionResponse;
-import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.LedgerRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.MerchantRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.PricingRepository;
 import orionpay.merchant.infrastructure.adapters.output.persistence.reposittory.TransactionRepository;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Log4j2
@@ -31,20 +25,22 @@ public class AuthorizeTransactionUseCase {
 
     private final MerchantRepository merchantRepository;
     private final TransactionRepository transactionRepository;
-    private final LedgerRepository ledgerRepository;
     private final PaymentGatewayPort paymentGateway;
     private final PricingRepository pricingRepository;
     private final IdempotencyService idempotencyService;
+    private final EventPublisherPort eventPublisher;
+    private final LiveTransactionBroadcastPort liveTransactionBroadcastPort;
+    private final TelemetryPublisherPort telemetryPublisher;
 
     @Transactional
-    // Invalida o cache do Dashboard para este lojista, pois o saldo e métricas mudaram
-    @CacheEvict(value = "dashboard_summary", key = "#request.merchantId")
+    @CacheEvict(value = "dashboard_summary", allEntries = true)
     public TransactionResponse execute(TransactionRequest request, String idempotencyKey) {
-        // 1. Checagem de Idempotência
+
         IdempotencyResult cachedResult = idempotencyService.checkAndLock(idempotencyKey);
+
         if (cachedResult != null) {
             if ("SUCCESS".equals(cachedResult.getStatus())) {
-                log.info("Retornando resposta idempotente para chave: {}", idempotencyKey);
+                log.info("Requisição de autorização idempotente (já processada). Chave: {}", idempotencyKey);
                 return (TransactionResponse) cachedResult.getResponseBody();
             } else {
                 throw new DomainException(cachedResult.getErrorMessage(), "IDEMPOTENCY_ERROR");
@@ -54,22 +50,14 @@ public class AuthorizeTransactionUseCase {
         try {
             log.info("Iniciando autorização de transação para o merchantId: {} | Valor: {}", request.merchantId(), request.amount());
 
-            // 2. Buscar e Validar Lojista
-            Merchant merchant = merchantRepository.findById(request.merchantId())
-                    .orElseThrow(() -> {
-                        log.warn("Merchant não encontrado: {}", request.merchantId());
-                        return new DomainException("Lojista não encontrado.", "MERCHANT_NOT_FOUND");
-                    });
+            Merchant merchant = merchantRepository
+                    .findById(request.merchantId())
+                    .orElseThrow(() -> new DomainException("Lojista não encontrado.", "MERCHANT_NOT_FOUND"));
 
-            // --- NOVA VALIDAÇÃO: Buscar Precificação antes de autorizar ---
-            log.debug("Buscando precificação para merchantId: {} e produto: {}", merchant.getId(), request.productType());
-            var pricing = pricingRepository.findCurrentPricing(merchant.getId(), request.productType())
-                    .orElseThrow(() -> {
-                        log.error("Precificação não encontrada para merchantId: {} e produto: {}", merchant.getId(), request.productType());
-                        return new DomainException("Lojista sem configuração de taxas para " + request.productType());
-                    });
+            var pricing = pricingRepository
+                    .findCurrentPricing(merchant.getId(), request.productType())
+                    .orElseThrow(() -> new DomainException("Lojista sem configuração de taxas para " + request.productType()));
 
-            // 2. Criar Transação
             Transaction transaction = new Transaction(
                     UUID.randomUUID(),
                     merchant,
@@ -78,68 +66,73 @@ public class AuthorizeTransactionUseCase {
                     new TransactionSource(request.terminalSn(), "v1.0", request.entryMode())
             );
 
-            // 3. Preencher dados seguros
-            transaction.setCardInfo(request.cardBrand(), request.cardBin(), request.cardLastFour(), request.cardHolderName());
+            transaction.setCardInfo(
+                    request.cardBrand(),
+                    request.cardBin(),
+                    request.cardLastFour(),
+                    request.cardHolderName()
+            );
 
-            // 4. Gateway (Rede)
             log.info("Enviando transação para o Gateway. TransactionId: {}", transaction.getId());
             GatewayAuthorizationResult authResult = paymentGateway.authorize(transaction, request);
 
-            // 5. Processar Resposta
             if (!authResult.isApproved()) {
                 log.warn("Transação negada pelo Gateway. Motivo: {}", authResult.getErrorMessage());
                 transaction.decline(authResult.getErrorMessage());
                 transactionRepository.save(transaction);
-                idempotencyService.saveError(idempotencyKey, "Transação negada: " + authResult.getErrorMessage());
-                throw new DomainException("Transação negada: " + authResult.getErrorMessage());
+
+                String errorMsg = "Transação negada: " + authResult.getErrorMessage();
+                idempotencyService.saveError(idempotencyKey, errorMsg);
+                throw new DomainException(errorMsg);
             }
 
-            // --- CÁLCULO DO VALOR LÍQUIDO ---
-            log.debug("Calculando valor líquido com taxa: {}%", pricing.getMdrPercentage());
             transaction.calculateNetValue(pricing.getMdrPercentage());
-
             transaction.processApproval(authResult.getNsu(), authResult.getAuthCode());
 
-            // 6. Persistir Transação
+            // 1. Salva a transação principal no banco de dados.
             transactionRepository.save(transaction);
             log.info("Transação autorizada e persistida com sucesso. ID: {} | NSU: {}", transaction.getId(), transaction.getNsu());
 
-            // 7. Movimentar Financeiro
-            if (transaction.getStatus().isEligibleForSettlement()) {
-                log.debug("Processando liquidação financeira para conta do merchantId: {}", merchant.getId());
-                LedgerAccount account = ledgerRepository.findByMerchantId(merchant.getId())
-                        .orElseThrow(() -> {
-                            log.error("Conta contábil não encontrada para merchantId: {}", merchant.getId());
-                            return new DomainException("Conta contábil não encontrada.");
-                        });
+            // 2. Publica o evento para o Transactional Outbox.
+            TransactionEvent event = TransactionEvent.builder()
+                    .id(UUID.randomUUID())
+                    .transactionId(transaction.getId())
+                    .merchantId(merchant.getId())
+                    .amount(transaction.getAmount())
+                    .productType(transaction.getProductType())
+                    .installments(request.installments())
+                    .status(transaction.getStatus())
+                    .occurredAt(LocalDateTime.now())
+                    .description("Transação autorizada via Outbox")
+                    .build();
 
-                // Lógica de Liquidação (D+1 ou D+30)
-                int daysToSettle = request.productType().getSettlementDays();
-                LocalDateTime availableAt = LocalDateTime.now().plusDays(daysToSettle);
+            eventPublisher.publish(event); // Apenas salva na tabela core.outbox
 
-                // IMPORTANTE: No Ledger, creditamos o valor LÍQUIDO
-                account.applyEntry(transaction.getNetAmount(), EntryType.CREDIT);
-                ledgerRepository.saveAccount(account);
+            // 3. Publica evento de telemetria (não bloqueante)
+            telemetryPublisher.publishTelemetry(
+                "orionpay-merchant-service",
+                "TRANSACTION_AUTHORIZED",
+                Map.of(
+                    "transactionId", transaction.getId(),
+                    "merchantId", transaction.getMerchant().getId(),
+                    "amount", transaction.getAmount(),
+                    "productType", transaction.getProductType().name()
+                )
+            );
 
-                ledgerRepository.saveEntry(
-                        account,
-                        transaction.getNetAmount(),
-                        EntryType.CREDIT,
-                        "Venda Cartão - NSU: " + transaction.getNsu(),
-                        transaction.getId(),
-                        availableAt // Data de liquidação calculada
-                );
-                log.info("Movimentação financeira realizada. Disponível em: {}", availableAt);
-            }
+            // 4. DISPARO DO EVENTO EM TEMPO REAL (ASSÍNCRONO)
+            // Esta chamada não bloqueia a thread e retorna imediatamente.
+            liveTransactionBroadcastPort.broadcastTransactionSaved(transaction);
 
             TransactionResponse response = TransactionResponse.fromDomain(transaction, "Transação aprovada.");
             idempotencyService.saveSuccess(idempotencyKey, response);
             return response;
 
         } catch (Exception e) {
-            // Em caso de erro inesperado, libera o lock para permitir retry
-            idempotencyService.releaseLock(idempotencyKey);
             log.error("Erro inesperado ao autorizar transação para merchantId: {}", request.merchantId(), e);
+            if (!(e instanceof DomainException)) {
+                idempotencyService.releaseLock(idempotencyKey);
+            }
             throw e;
         }
     }
