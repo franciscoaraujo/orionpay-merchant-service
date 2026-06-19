@@ -22,4 +22,7 @@ public interface LedgerRepository {
 
     // Novo método otimizado
     LedgerBalanceProjection getLedgerBalances(UUID merchantId);
+
+    // Novo método para dedução atômica
+    int deductBalanceAtomic(UUID merchantId, BigDecimal amount);
 }

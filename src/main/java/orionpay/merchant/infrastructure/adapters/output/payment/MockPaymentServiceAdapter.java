@@ -12,8 +12,10 @@ public class MockPaymentServiceAdapter implements PaymentServicePort {
 
     @Override
     public boolean processPixPayout(String pixKey, BigDecimal amount) {
-        log.info(">>> [MOCK PIX SERVICE] Iniciando transferência de R$ {} para chave: {}", amount, pixKey);
-        
+        // Construindo um JSON simples para logar o que seria enviado
+        String jsonPayload = String.format("{\"pixKey\": \"%s\", \"amount\": %s}", pixKey, amount.toPlainString());
+        log.info(">>> [MOCK PIX SERVICE] Enviando para o switch: {}", jsonPayload);
+
         // Simulação de sucesso imediato
         log.info(">>> [MOCK PIX SERVICE] Pix realizado com sucesso!");
         return true;

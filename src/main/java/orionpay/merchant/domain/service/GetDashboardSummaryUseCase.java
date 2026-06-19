@@ -46,6 +46,7 @@ public class GetDashboardSummaryUseCase {
 
         var balances = ledgerRepository.getLedgerBalances(merchantId);
         BigDecimal availableBalance = balances != null ? balances.getAvailableBalance() : BigDecimal.ZERO;
+
         BigDecimal futureReceivables = balances != null ? balances.getFutureReceivables() : BigDecimal.ZERO;
 
         Long activeTerminals = terminalRepository.countByMerchantIdAndStatus(merchantId, "ACTIVE");

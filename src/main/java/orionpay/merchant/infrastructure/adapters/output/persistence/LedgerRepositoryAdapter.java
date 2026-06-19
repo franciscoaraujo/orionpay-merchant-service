@@ -113,4 +113,10 @@ public class LedgerRepositoryAdapter implements LedgerRepository {
     public LedgerBalanceProjection getLedgerBalances(UUID merchantId) {
         return jpaLedgerEntryRepository.getBalances(merchantId);
     }
+
+    @Override
+    @Transactional // Garante que a operação de dedução atômica seja transacional
+    public int deductBalanceAtomic(UUID merchantId, BigDecimal amount) {
+        return jpaLedgerAccountRepository.deductBalanceAtomic(merchantId, amount);
+    }
 }

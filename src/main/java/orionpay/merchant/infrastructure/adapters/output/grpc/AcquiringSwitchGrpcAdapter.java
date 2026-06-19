@@ -29,11 +29,11 @@ public class AcquiringSwitchGrpcAdapter implements AcquiringSwitchPort {
         AuthorizeRequest grpcRequest = toGrpcRequest(domainRequest);
         try {
             log.info("Sending gRPC AuthorizeRequest to switch: {}", JsonFormat.printer().omittingInsignificantWhitespace().print(grpcRequest));
-            
+
             AuthorizeResponse grpcResponse = blockingStub
                     .withDeadlineAfter(5, TimeUnit.SECONDS)
                     .authorizeTransaction(grpcRequest);
-            
+
             return Optional.of(toDomainResult(grpcResponse));
         } catch (StatusRuntimeException e) {
             log.error("gRPC error during authorization: {}", e.getStatus(), e);
@@ -50,8 +50,6 @@ public class AcquiringSwitchGrpcAdapter implements AcquiringSwitchPort {
         throw new UnsupportedOperationException("Refund functionality is not implemented in the current gRPC contract.");
     }
 
-    // --- Mappers Atualizados ---
-
     private AuthorizeRequest toGrpcRequest(Authorization.Request r) {
         AuthorizeRequest.Builder builder = AuthorizeRequest.newBuilder();
 
@@ -60,32 +58,33 @@ public class AcquiringSwitchGrpcAdapter implements AcquiringSwitchPort {
         } else {
             builder.setId("");
         }
-        
+
         if (r.getMerchantId() != null) {
             builder.setMerchantId(r.getMerchantId().toString());
         } else {
             builder.setMerchantId("");
         }
-        
+
         if (r.getTerminalId() != null) {
             builder.setTerminalId(r.getTerminalId());
         } else {
             builder.setTerminalId("");
         }
-        
+
         if (r.getPanMasked() != null) {
             builder.setPanMasked(r.getPanMasked());
         } else {
             builder.setPanMasked("");
         }
-        
+
         if (r.getPinBlock() != null) {
             builder.setPinBlockTerminal(r.getPinBlock());
         } else {
             builder.setPinBlockTerminal("");
         }
 
-        builder.setAmount(String.valueOf(r.getAmountInCents()));
+        // Alterado para usar BigDecimal e toPlainString()
+        builder.setAmount(r.getAmount().toPlainString());
         builder.setCurrencyCode(r.getCurrencyCode());
 
         return builder.build();

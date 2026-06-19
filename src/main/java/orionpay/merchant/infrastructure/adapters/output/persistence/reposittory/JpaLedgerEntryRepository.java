@@ -24,7 +24,7 @@ public interface JpaLedgerEntryRepository extends JpaRepository<LedgerEntryEntit
        SELECT COALESCE(SUM(
            CASE 
                WHEN e.type IN ('CREDIT', 'PREPAYMENT_CREDIT', 'WITHDRAWAL_REVERSAL', 'REFUND_REVERSAL') AND e.availableAt <= CURRENT_TIMESTAMP THEN e.amount 
-               WHEN e.type IN ('DEBIT', 'WITHDRAWAL_HOLD', 'WITHDRAWAL_COMPLETED', 'PREPAYMENT_FEE', 'REFUND_HOLD', 'REFUND_DEBIT') THEN -e.amount 
+               WHEN e.type IN ('DEBIT', 'WITHDRAWAL_COMPLETED', 'PREPAYMENT_FEE', 'REFUND_DEBIT') AND e.availableAt <= CURRENT_TIMESTAMP THEN -e.amount 
                ELSE 0 
            END
        ), 0)
@@ -45,7 +45,7 @@ public interface JpaLedgerEntryRepository extends JpaRepository<LedgerEntryEntit
             (SELECT COALESCE(SUM(
                 CASE 
                     WHEN le.type IN ('CREDIT', 'PREPAYMENT_CREDIT', 'WITHDRAWAL_REVERSAL', 'REFUND_REVERSAL') AND le.available_at <= NOW() THEN le.amount
-                    WHEN le.type IN ('DEBIT', 'WITHDRAWAL_HOLD', 'WITHDRAWAL_COMPLETED', 'PREPAYMENT_FEE', 'REFUND_HOLD', 'REFUND_DEBIT') THEN -le.amount
+                    WHEN le.type IN ('DEBIT', 'WITHDRAWAL_COMPLETED', 'PREPAYMENT_FEE', 'REFUND_DEBIT') AND le.available_at <= NOW() THEN -le.amount
                     ELSE 0 
                 END
             ), 0) FROM accounting.ledger_entry le JOIN accounting.ledger_account la ON le.account_id = la.id WHERE la.merchant_id = :merchantId) as availableBalance,

@@ -33,9 +33,7 @@ public class WithdrawController {
             @RequestBody WithdrawRequest request,
             @RequestHeader("X-Idempotency-Key") String idempotencyKey
     ) {
-        // O merchantId é extraído do Token JWT por segurança
         UUID merchantId = securityContextService.getCurrentMerchantId();
-        
         try {
             withdrawUseCase.execute(request, idempotencyKey);
             return ResponseEntity.ok(Map.of("message", "Saque realizado com sucesso."));
@@ -51,11 +49,9 @@ public class WithdrawController {
             @PageableDefault(size = 10) Pageable pageable
     ) {
         UUID merchantId = securityContextService.getCurrentMerchantId();
-        
         log.info("Auditoria: Merchant {} solicitando histórico de saques.", merchantId);
-        
         Page<PayoutHistoryResponse> response = getPayoutHistoryUseCase.execute(merchantId, pageable);
-        
+
         return ResponseEntity.ok(response);
     }
 }

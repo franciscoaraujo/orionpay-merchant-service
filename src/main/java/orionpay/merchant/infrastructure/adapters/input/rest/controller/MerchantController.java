@@ -21,13 +21,7 @@ public class MerchantController {
 
     @PostMapping("/onboarding")
     public ResponseEntity<MerchantResponse> onboarding(@Valid @RequestBody MerchantRegistrationRequest request) {
-
-        System.out.println("Recebido: " + request);
-        // Agora recebemos diretamente o MerchantResponse que o Use Case gera
         MerchantResponse response = merchantUseCase.execute(request);
-
-        // Como o Use Case já cuidou da conversão e da mensagem,
-        // basta retornar o corpo com o status 201 (Created)
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

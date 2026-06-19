@@ -3,6 +3,7 @@ package orionpay.merchant.domain.model;
 import lombok.Builder;
 import lombok.Value;
 
+import java.math.BigDecimal; // Importar BigDecimal
 import java.time.Instant;
 import java.util.UUID;
 
@@ -16,11 +17,11 @@ public final class Authorization {
         UUID id;
         UUID merchantId;
         String terminalId;
-        long amountInCents;
+        BigDecimal amount; // Alterado de long amountInCents para BigDecimal amount
         int currencyCode;
         String pinBlock;
         String panMasked;
-        String cardHolderName; // <-- CAMPO ADICIONADO
+        String cardHolderName;
     }
 
     @Value
